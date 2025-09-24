@@ -579,22 +579,35 @@ function CommandPalette({ open, onClose, onNavigate }: { open: boolean; onClose:
     { id: "home", label: "Go to Home" },
     { id: "work", label: "Open Projects + Research" },
     { id: "blog", label: "Open Notes" },
-    // { id: "graph", label: "Open Idea Graph" },
     // { id: "contact", label: "Go to Contact" },
     { id: "contact", label: "Connect with me" },
   ];
   
   const hiddenItems = [
+    { id: "graph", label: "Open Idea Graph" },
     { id: "blog", label: "Notes: Astrophotography" },
     { id: "blog", label: "Notes: Machine Learning" },
     { id: "contact", label: "Contact: Email" },
     { id: "contact", label: "Socials" },
   ];
   const allItems = [...items, ...hiddenItems];
-  const filtered = input
-    ? allItems.filter((i) => i.label.toLowerCase().includes(input.toLowerCase()))
-    : items;
 
+  // Only show all items if input is truly empty (not just whitespace)
+  const trimmedInput = input.trim();
+  let filtered: typeof allItems;
+  if (!trimmedInput) {
+    filtered = items;
+  } else {
+    // Remove duplicates by id
+    const seen = new Set<string>();
+    filtered = allItems
+      .filter((i) => i.label.toLowerCase().includes(trimmedInput.toLowerCase()))
+      .filter((i) => {
+        if (seen.has(i.id + i.label)) return false;
+        seen.add(i.id + i.label);
+        return true;
+      });
+  }
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
@@ -627,7 +640,7 @@ function CommandPalette({ open, onClose, onNavigate }: { open: boolean; onClose:
         <div className="max-h-72 overflow-auto p-1">
           {filtered.map((i) => (
             <button
-              key={i.id}
+              key={i.id + i.label}
               onClick={() => {
                 onNavigate(i.id);
                 onClose();
@@ -661,7 +674,7 @@ function Notes() {
      {
       name: "C27 (Crescent Nebula)",
       files: ["C27(1).JPG", "C27(2).JPG"],
-      desc: "An emission nebula in Cygnus, formed by stellar winds from a massive star.",
+      desc: "An emission nebula in Cygnus, formed by stellar winds from a massive, incredibly hot star at its heart.",
     },
     {
       name: "IC 5070 (Pelican Nebula)",
@@ -835,6 +848,7 @@ function ProjectsResearch() {
           </ul>
         </div>
       ),
+      clickable: false,
     },
     {
       title: "Galactic Mapping with Machine Learning",
@@ -912,18 +926,19 @@ function ProjectsResearch() {
             </tbody>
           </table>
 
-          {/* Mock graph */}
+          {/* Mock graph 
           <img
             src="/f1_comparison_chart.png"
             alt="F1 Score Comparison"
             className="rounded-xl border shadow"
-          />
+          />*/}
           <p className="text-xs text-zinc-500">
             Average F1-score comparison across classifiers, highlighting
             strengths in background/bulge detection and weaknesses in outer disk.
           </p>
         </div>
       ),
+      clickable: true,
     },
     {
       title: "Bird Species Classification Algorithm",
@@ -956,6 +971,7 @@ function ProjectsResearch() {
           </p>
         </div>
       ),
+      clickable: false,
     },
     {
       title: "Spectral Emission Study",
@@ -978,6 +994,7 @@ function ProjectsResearch() {
           </p>
         </div>
       ),
+      clickable: false,
     },
     {
       title: "CubeSat Satellite Project",
@@ -1000,6 +1017,7 @@ function ProjectsResearch() {
           </p>
         </div>
       ),
+      clickable: false,
     },
   ];
 
@@ -1010,8 +1028,13 @@ function ProjectsResearch() {
       {work.map((w) => (
         <div
           key={w.title}
-          className="rounded-2xl border border-zinc-200 p-4 hover:shadow-md hover:border-zinc-300 cursor-pointer transition"
-          onClick={() => setActive(w)}
+          className={`rounded-2xl border border-zinc-200 p-4 transition
+            ${w.clickable ? "hover:shadow-md hover:border-zinc-300 cursor-pointer" : ""}
+          `}
+          onClick={() => w.clickable && setActive(w)}
+          tabIndex={w.clickable ? 0 : -1}
+          aria-disabled={!w.clickable}
+          style={w.clickable ? {} : { pointerEvents: "none" }}
         >
           <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
             <span>{w.venue}</span>
@@ -1033,7 +1056,7 @@ function ProjectsResearch() {
       <AnimatePresence>
         {active && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm "
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1084,9 +1107,6 @@ function Contact() {
         <p className="text-zinc-600 mb-1">
           always down to riff on new ideas, collab, or just chat
          
-        </p>
-        <p className="text-zinc-600 mb-7 ">
-          ron@ktoprani@gmail.com 
         </p>
                <div className="flex justify-center gap-8 mt-4">
         
