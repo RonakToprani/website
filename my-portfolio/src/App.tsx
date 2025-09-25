@@ -13,13 +13,7 @@ import {
   User,
 } from "lucide-react";
 
-type WorkItem = {
-  title: string;
-  venue: string;
-  tags: string[];
-  desc: string;
-  details?: JSX.Element; // optional expanded content
-};
+
 
 // =======
 // Layout
