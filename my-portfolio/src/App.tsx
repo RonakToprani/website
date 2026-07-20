@@ -100,224 +100,6 @@ export const ASTRO: AstroObj[] = [
   },
 ];
 
-// =========================================================
-// Interactive project mini-visuals
-// Monochrome + a single accent each; illustrative previews.
-// =========================================================
-
-// Fixate — scrub through a focus session; drift markers + live focus %
-function FixateViz() {
-  const total = 45; // minutes
-  const drifts = [7, 19, 31]; // minute marks where attention drifted
-  const [t, setT] = useState(total);
-  const focusPct = Math.max(
-    0,
-    Math.round(100 - (drifts.filter((d) => d <= t).length / Math.max(t, 1)) * 100 * 3)
-  );
-  return (
-    <div className="rounded-xl border border-zinc-200 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-xs font-medium text-zinc-500">Focus session replay · illustrative</div>
-        <div className="text-right">
-          <span className="text-2xl font-semibold tabular-nums text-zinc-900">{focusPct}%</span>
-          <span className="text-xs text-zinc-400 ml-1">focus</span>
-        </div>
-      </div>
-      <svg viewBox="0 0 300 40" className="w-full">
-        <rect x="0" y="16" width="300" height="8" rx="4" fill="#e4e4e7" />
-        <rect x="0" y="16" width={(t / total) * 300} height="8" rx="4" fill="#10b981" />
-        {drifts.map((d) => (
-          <g key={d}>
-            <rect x={(d / total) * 300 - 1} y="10" width="2" height="20" rx="1" fill="#ef4444" />
-          </g>
-        ))}
-        <circle cx={(t / total) * 300} cy="20" r="6" fill="#fff" stroke="#10b981" strokeWidth="2" />
-      </svg>
-      <input
-        type="range"
-        min={0}
-        max={total}
-        value={t}
-        onChange={(e) => setT(parseInt(e.target.value))}
-        className="w-full mt-2 accent-emerald-500"
-        aria-label="Scrub focus session"
-      />
-      <div className="flex items-center gap-4 mt-2 text-[11px] text-zinc-500">
-        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-emerald-500" /> focused</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-sm bg-red-500" /> drift</span>
-        <span className="ml-auto tabular-nums">{t} / {total} min</span>
-      </div>
-    </div>
-  );
-}
-
-// whoomp — recovery ring + hoverable heart-rate sparkline
-function WhoompViz() {
-  const hr = [58, 61, 60, 64, 72, 68, 63, 66, 74, 70, 65, 62, 67, 71, 69];
-  const [hover, setHover] = useState<number | null>(null);
-  const w = 300, h = 60, min = 52, max = 78;
-  const pts = hr.map((v, i) => [
-    (i / (hr.length - 1)) * w,
-    h - ((v - min) / (max - min)) * (h - 8) - 4,
-  ]);
-  const path = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
-  const recovery = 72;
-  const R = 26, C = 2 * Math.PI * R;
-  return (
-    <div className="rounded-xl border border-zinc-200 p-4 flex flex-col sm:flex-row items-center gap-5">
-      <div className="relative shrink-0">
-        <svg width="72" height="72" viewBox="0 0 72 72">
-          <circle cx="36" cy="36" r={R} fill="none" stroke="#e4e4e7" strokeWidth="7" />
-          <circle
-            cx="36" cy="36" r={R} fill="none" stroke="#10b981" strokeWidth="7"
-            strokeLinecap="round" strokeDasharray={C}
-            strokeDashoffset={C * (1 - recovery / 100)}
-            transform="rotate(-90 36 36)"
-          />
-        </svg>
-        <div className="absolute inset-0 grid place-items-center">
-          <div className="text-center leading-none">
-            <div className="text-lg font-semibold text-zinc-900">{recovery}</div>
-            <div className="text-[9px] uppercase tracking-wide text-zinc-400">recov</div>
-          </div>
-        </div>
-      </div>
-      <div className="flex-1 w-full">
-        <div className="flex items-baseline justify-between mb-1">
-          <div className="text-xs font-medium text-zinc-500">Live heart rate · illustrative</div>
-          <div className="text-sm tabular-nums text-zinc-900">
-            {hover !== null ? hr[hover] : hr[hr.length - 1]} <span className="text-xs text-zinc-400">bpm</span>
-          </div>
-        </div>
-        <svg viewBox={`0 0 ${w} ${h}`} className="w-full" onMouseLeave={() => setHover(null)}>
-          <path d={path} fill="none" stroke="#e11d48" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-          {pts.map((p, i) => (
-            <rect
-              key={i} x={p[0] - w / hr.length / 2} y="0" width={w / hr.length} height={h}
-              fill="transparent" onMouseEnter={() => setHover(i)}
-            />
-          ))}
-          {hover !== null && (
-            <circle cx={pts[hover][0]} cy={pts[hover][1]} r="4" fill="#fff" stroke="#e11d48" strokeWidth="2" />
-          )}
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-// kōdō — priority donut + now/next/later load
-function KodoViz() {
-  const data = [
-    { label: "High", value: 4, color: "#18181b" },
-    { label: "Medium", value: 7, color: "#71717a" },
-    { label: "Low", value: 5, color: "#d4d4d8" },
-  ];
-  const totalV = data.reduce((s, d) => s + d.value, 0);
-  const [hover, setHover] = useState<number | null>(null);
-  const R = 30, r = 18, cx = 36, cy = 36;
-  let acc = 0;
-  const arcs = data.map((d) => {
-    const start = (acc / totalV) * 2 * Math.PI;
-    acc += d.value;
-    const end = (acc / totalV) * 2 * Math.PI;
-    const large = end - start > Math.PI ? 1 : 0;
-    const p = (ang: number, rad: number) => [cx + rad * Math.sin(ang), cy - rad * Math.cos(ang)];
-    const [x1, y1] = p(start, R), [x2, y2] = p(end, R);
-    const [x3, y3] = p(end, r), [x4, y4] = p(start, r);
-    return `M${x1},${y1} A${R},${R} 0 ${large} 1 ${x2},${y2} L${x3},${y3} A${r},${r} 0 ${large} 0 ${x4},${y4} Z`;
-  });
-  const buckets = [
-    { label: "Now", n: 3 },
-    { label: "Next", n: 5 },
-    { label: "Later", n: 8 },
-  ];
-  return (
-    <div className="rounded-xl border border-zinc-200 p-4 flex flex-col sm:flex-row items-center gap-5">
-      <div className="relative shrink-0">
-        <svg width="72" height="72" viewBox="0 0 72 72">
-          {arcs.map((d, i) => (
-            <path
-              key={i} d={d} fill={data[i].color}
-              opacity={hover === null || hover === i ? 1 : 0.35}
-              onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
-              stroke="#fff" strokeWidth="1.5"
-            />
-          ))}
-        </svg>
-        <div className="absolute inset-0 grid place-items-center pointer-events-none">
-          <div className="text-center leading-none">
-            <div className="text-lg font-semibold text-zinc-900">{hover === null ? totalV : data[hover].value}</div>
-            <div className="text-[9px] uppercase tracking-wide text-zinc-400">{hover === null ? "tasks" : data[hover].label}</div>
-          </div>
-        </div>
-      </div>
-      <div className="flex-1 w-full space-y-2">
-        <div className="text-xs font-medium text-zinc-500 mb-1">Task load · illustrative</div>
-        {buckets.map((b) => (
-          <div key={b.label} className="flex items-center gap-2">
-            <span className="w-10 text-[11px] text-zinc-500">{b.label}</span>
-            <div className="flex-1 h-2 rounded-full bg-zinc-100 overflow-hidden">
-              <div className="h-full rounded-full bg-zinc-800" style={{ width: `${(b.n / 8) * 100}%` }} />
-            </div>
-            <span className="w-4 text-[11px] tabular-nums text-zinc-400 text-right">{b.n}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// CryptoRadar — market sparkline + regulatory status heatmap
-function CryptoRadarViz() {
-  const series = [42, 44, 43, 47, 51, 49, 53, 58, 55, 60, 63, 61, 66, 70, 68];
-  const w = 300, h = 44, min = 38, max = 74;
-  const pts = series.map((v, i) => [
-    (i / (series.length - 1)) * w,
-    h - ((v - min) / (max - min)) * (h - 6) - 3,
-  ]);
-  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
-  const area = `${line} L${w},${h} L0,${h} Z`;
-  // regulatory status grid: 0 restrictive, 1 developing, 2 favorable
-  const grid = [
-    { c: "US", s: 1 }, { c: "CA", s: 2 }, { c: "BR", s: 2 }, { c: "MX", s: 1 },
-    { c: "AR", s: 1 }, { c: "CL", s: 2 }, { c: "CO", s: 1 }, { c: "SV", s: 2 },
-  ];
-  const scale = ["#e4e4e7", "#a1a1aa", "#18181b"];
-  const statusLabel = ["Restrictive", "Developing", "Favorable"];
-  const [hover, setHover] = useState<number | null>(null);
-  return (
-    <div className="rounded-xl border border-zinc-200 p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="text-xs font-medium text-zinc-500">Market index · illustrative</div>
-        <div className="text-sm tabular-nums text-zinc-900">+18.4%<span className="text-xs text-zinc-400 ml-1">90d</span></div>
-      </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
-        <path d={area} fill="#3b82f6" opacity="0.08" />
-        <path d={line} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      </svg>
-      <div>
-        <div className="text-xs font-medium text-zinc-500 mb-1.5">Americas regulatory posture</div>
-        <div className="flex flex-wrap gap-1.5">
-          {grid.map((g, i) => (
-            <div
-              key={g.c} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
-              className="w-9 h-9 rounded-md grid place-items-center text-[10px] font-medium cursor-default"
-              style={{ background: scale[g.s], color: g.s === 2 ? "#fff" : "#3f3f46" }}
-              title={`${g.c}: ${statusLabel[g.s]}`}
-            >
-              {g.c}
-            </div>
-          ))}
-        </div>
-        <div className="text-[11px] text-zinc-500 mt-1.5 h-4">
-          {hover !== null ? `${grid[hover].c} — ${statusLabel[grid[hover].s]}` : "Hover a country for its regulatory status"}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // =======
 // Layout
 // =======
@@ -1095,45 +877,32 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
         ))}
       </section>
 
-      <section id="astro-section" className="scroll-mt-24">
-        <div className="flex items-baseline justify-between mb-2">
-          <h2 className="text-lg font-semibold">Astrophotography</h2>
-          <span className="text-xs text-zinc-400">{astroPhotos.length} targets</span>
-        </div>
+      <section id="astro-section">
+        <h2 className="text-lg font-semibold mb-2">Astrophotography</h2>
         <p className="text-sm text-zinc-500 mb-4">
-          Shot with a Seestar S50 smart telescope or a Canon mirrorless — long exposures,
-          stacked and processed. Click any target to open the full frame.
+        These photos are either taken with a Seestar S50 telescope or a canon mirrorless camera. In both cases, images are taken with long exposures and stacked.
         </p>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {astroPhotos.map((obj, objIdx) => (
-            <button
-              key={obj.name}
-              onClick={() => setGallery({ objIdx, imgIdx: 0 })}
-              className="group text-left rounded-2xl border border-zinc-200 bg-white overflow-hidden hover:border-zinc-300 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-zinc-300"
-            >
-              <div className="relative aspect-[4/5] sm:aspect-[4/3] bg-zinc-950 overflow-hidden">
-                <img
-                  src={`/${obj.files[0]}`}
-                  alt={obj.name}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.04] transition duration-500"
-                />
-                {obj.files.length > 1 && (
-                  <span className="absolute top-2 right-2 rounded-full bg-black/60 text-white text-[10px] px-2 py-0.5 backdrop-blur">
-                    {obj.files.length} shots
-                  </span>
-                )}
-                {obj.gear && (
-                  <span className="absolute bottom-2 left-2 rounded-full bg-white/85 text-zinc-700 text-[10px] px-2 py-0.5 backdrop-blur">
-                    {obj.gear}
-                  </span>
-                )}
+            <div key={obj.name} className="rounded-2xl border border-zinc-200 p-4 bg-white">
+              <div className="font-medium mb-1">{obj.name}</div>
+              <div className="flex gap-2 mb-2">
+                {obj.files.map((file, imgIdx) => (
+                  <button
+                    key={file}
+                    onClick={() => setGallery({ objIdx, imgIdx })}
+                    className="focus:outline-none"
+                  >
+                    <img
+                      src={`/${file}`}
+                      alt={obj.name}
+                      className="rounded-lg border border-zinc-100 object-cover h-32 w-32 hover:scale-105 transition"
+                    />
+                  </button>
+                ))}
               </div>
-              <div className="p-3">
-                <div className="font-medium text-sm leading-tight">{obj.name}</div>
-                <div className="text-xs text-zinc-500 mt-1 line-clamp-2">{obj.desc}</div>
-              </div>
-            </button>
+              <div className="text-sm text-zinc-600">{obj.desc}</div>
+            </div>
           ))}
         </div>
       </section>
@@ -1144,68 +913,53 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
             onClick={() => setGallery(null)}
           >
             <div
-              className="relative max-w-5xl w-full flex flex-col items-center"
+              className="relative bg-white rounded-2xl p-6 shadow-xl flex flex-col items-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                onClick={() => setGallery(null)}
-                className="absolute -top-1 right-0 text-white/70 hover:text-white text-2xl leading-none z-10"
-                aria-label="Close"
-              >
-                ✕
-              </button>
-              <div className="relative">
-                <img
-                  src={`/${astroPhotos[gallery.objIdx].files[gallery.imgIdx]}`}
-                  alt={astroPhotos[gallery.objIdx].name}
-                  className="max-w-full max-h-[74vh] rounded-xl border border-white/10 shadow-2xl"
-                />
-                {astroPhotos[gallery.objIdx].files.length > 1 && (
-                  <>
-                    <button
-                      className="absolute left-2 top-1/2 -translate-y-1/2 grid place-items-center w-9 h-9 rounded-full bg-black/50 text-white hover:bg-black/70 disabled:opacity-30"
-                      disabled={gallery.imgIdx === 0}
-                      onClick={() =>
-                        setGallery((g) => (g && g.imgIdx > 0 ? { objIdx: g.objIdx, imgIdx: g.imgIdx - 1 } : g))
-                      }
-                      aria-label="Previous"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      className="absolute right-2 top-1/2 -translate-y-1/2 grid place-items-center w-9 h-9 rounded-full bg-black/50 text-white hover:bg-black/70 disabled:opacity-30"
-                      disabled={gallery.imgIdx === astroPhotos[gallery.objIdx].files.length - 1}
-                      onClick={() =>
-                        setGallery((g) =>
-                          g && g.imgIdx < astroPhotos[g.objIdx].files.length - 1
-                            ? { objIdx: g.objIdx, imgIdx: g.imgIdx + 1 }
-                            : g
-                        )
-                      }
-                      aria-label="Next"
-                    >
-                      ›
-                    </button>
-                  </>
-                )}
+              <img
+                src={`/${astroPhotos[gallery.objIdx].files[gallery.imgIdx]}`}
+                alt={astroPhotos[gallery.objIdx].name}
+                className="max-w-[80vw] max-h-[70vh] rounded-xl border border-zinc-200"
+              />
+              <div className="mt-4 text-center">
+                <div className="font-medium">{astroPhotos[gallery.objIdx].name}</div>
+                <div className="text-sm text-zinc-600">{astroPhotos[gallery.objIdx].desc}</div>
               </div>
-              <div className="mt-4 text-center text-white max-w-2xl">
-                <div className="font-medium flex items-center justify-center gap-2">
-                  {astroPhotos[gallery.objIdx].name}
-                  {astroPhotos[gallery.objIdx].files.length > 1 && (
-                    <span className="text-xs text-white/50">
-                      {gallery.imgIdx + 1} / {astroPhotos[gallery.objIdx].files.length}
-                    </span>
-                  )}
-                </div>
-                <div className="text-sm text-white/70 mt-1">{astroPhotos[gallery.objIdx].desc}</div>
-                {astroPhotos[gallery.objIdx].gear && (
-                  <div className="text-xs text-white/40 mt-2">{astroPhotos[gallery.objIdx].gear}</div>
-                )}
+              <div className="flex gap-2 mt-4">
+                <button
+                  className="px-3 py-1 rounded-lg border bg-zinc-50 text-sm"
+                  disabled={gallery.imgIdx === 0}
+                  onClick={() =>
+                    setGallery((g) =>
+                      g && g.imgIdx > 0 ? { objIdx: g.objIdx, imgIdx: g.imgIdx - 1 } : g
+                    )
+                  }
+                >
+                  Prev
+                </button>
+                <button
+                  className="px-3 py-1 rounded-lg border bg-zinc-50 text-sm"
+                  disabled={gallery.imgIdx === astroPhotos[gallery.objIdx].files.length - 1}
+                  onClick={() =>
+                    setGallery((g) =>
+                      g && g.imgIdx < astroPhotos[g.objIdx].files.length - 1
+                        ? { objIdx: g.objIdx, imgIdx: g.imgIdx + 1 }
+                        : g
+                    )
+                  }
+                >
+                  Next
+                </button>
+                <button
+                  className="px-3 py-1 rounded-lg border bg-zinc-50 text-sm"
+                  onClick={() => setGallery(null)}
+                >
+                  Close
+                </button>
               </div>
             </div>
           </motion.div>
@@ -1549,7 +1303,6 @@ const WORK = [
             attention drifts, blocks your distraction sites, and notices when you leave the browser
             entirely. The session becomes a verifiable record of real, attributed focus time.
           </p>
-          <FixateViz />
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-zinc-200 p-3">
               <div className="font-medium mb-1">Trustworthy gaze detection</div>
@@ -1605,7 +1358,6 @@ const WORK = [
             talks to the hardware directly — pulling raw heart-rate and sensor streams and computing
             recovery metrics locally, with nothing leaving the phone.
           </p>
-          <WhoompViz />
           <div className="rounded-xl border border-zinc-200 p-3">
             <div className="font-medium mb-1">Protocol work</div>
             <ul className="list-disc pl-5 text-xs text-zinc-600 space-y-1">
@@ -1643,7 +1395,6 @@ const WORK = [
             how long it'll take, and pins anything dated to the calendar. The intelligence runs
             entirely on local models, so it's fast, private, and free to run.
           </p>
-          <KodoViz />
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-zinc-200 p-3">
               <div className="font-medium mb-1">Two models, in parallel</div>
@@ -1683,7 +1434,6 @@ const WORK = [
             policy picture into a single dense dashboard: what's happening to price and ETF demand
             right now, and what's happening to the rules underneath it across the Americas.
           </p>
-          <CryptoRadarViz />
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-zinc-200 p-3">
               <div className="font-medium mb-1">Market layer</div>
@@ -1724,16 +1474,6 @@ const WORK = [
             animated face and is driven by a small language model — a companion, not an assistant.
             The project has gone through multiple hardware and firmware revisions.
           </p>
-          <div className="rounded-xl border border-zinc-200 p-3 bg-zinc-50">
-            <img
-              src="/mochi_screen.png"
-              alt="Mochi robot display — LVGL UI running on the ESP32 touchscreen"
-              className="rounded-lg border border-zinc-200 mx-auto max-h-56 object-contain"
-            />
-            <p className="text-[11px] text-zinc-500 mt-2 text-center">
-              Mochi's on-device display — the LVGL interface running on the ESP32 touchscreen.
-            </p>
-          </div>
           <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
             <span className="rounded-lg border border-zinc-200 px-2 py-0.5">ESP32</span>
             <span className="rounded-lg border border-zinc-200 px-2 py-0.5">PlatformIO / C++</span>
