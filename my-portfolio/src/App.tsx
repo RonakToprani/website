@@ -80,15 +80,15 @@ export const ASTRO: AstroObj[] = [
   {
     name: "M101 (Pinwheel Galaxy)",
     aliases: ["Pinwheel Galaxy", "NGC 5457", "Ursa Major", "grand design spiral"],
-    files: ["m101.jpg"],
-    desc: "A grand-design face-on spiral in Ursa Major, with sweeping blue arms and pink star-forming regions.",
+    files: ["m101.jpg", "m101-2.jpg"],
+    desc: "A grand-design face-on spiral in Ursa Major, with sweeping blue arms and pink star-forming regions. Shown fully processed and as the raw stack.",
     gear: "Canon mirrorless",
   },
   {
-    name: "M33 (Triangulum Galaxy)",
-    aliases: ["Triangulum Galaxy", "NGC 598", "face-on spiral"],
-    files: ["m33.jpg", "m33-2.jpg"],
-    desc: "A faint face-on spiral in Triangulum — a challenging low-surface-brightness target. Two exposures showing how much stacking pulls out of the noise.",
+    name: "Faint face-on spiral",
+    aliases: ["face-on spiral", "galaxy"],
+    files: ["faint-spiral.jpg"],
+    desc: "A dim face-on spiral pulled out of a short integration, with a couple of small companion galaxies nearby.",
     gear: "Canon mirrorless",
   },
   {
