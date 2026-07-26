@@ -304,7 +304,7 @@ function Hero(){
           <span className="font-medium">Fixate</span> — a Chrome extension that <em>verifies</em> focus with local, on-device gaze detection. No backend, no data leaves the machine.
         </BlockCard>
         <BlockCard title="Also Shipping" icon={<GitBranch className="size-4" />}>
-          <span className="font-medium">whoomp</span> (WHOOP 4.0 reverse-engineered over BLE) and <span className="font-medium">kōdō</span> (a productivity dashboard run by local SLMs).
+          <span className="font-medium">whoomp</span> (a local-first health app that reads biometrics on-device) and <span className="font-medium">kōdō</span> (a productivity dashboard run by local SLMs).
         </BlockCard>
         <BlockCard title="Recent Note" icon={<BookText className="size-4" />}>
           New astrophotography — the C27 Crescent Nebula, M27 Dumbbell, and more, over in the Notes section.
@@ -632,7 +632,7 @@ function mockGraph() {
   const nodes = [
     // Builds / products (top band)
     { id: "fixate", label: "Fixate — Verified Focus", kind: "Project", x: 110, y: 70, note: "Local-CV Chrome extension that verifies real focus time." },
-    { id: "whoomp", label: "whoomp (WHOOP 4.0)", kind: "Project", x: 290, y: 70, note: "Reverse-engineered WHOOP 4.0 over BLE; on-device biometrics." },
+    { id: "whoomp", label: "whoomp", kind: "Project", x: 290, y: 70, note: "Local-first health app: reads biometrics over BLE, computes recovery on-device." },
     { id: "kodo", label: "kōdō", kind: "Project", x: 470, y: 70, note: "Productivity dashboard driven by local SLMs." },
     { id: "cryptoradar", label: "CryptoRadar", kind: "Project", x: 650, y: 70, note: "Crypto regulatory + market intelligence terminal." },
     { id: "options", label: "Options Chain Analytics", kind: "Project", x: 110, y: 150, note: "Analytics for historical options chain data." },
@@ -699,7 +699,7 @@ function CommandPalette({
     const featured = SEARCH_INDEX.filter((e) =>
       [
         "Fixate — verified focus",
-        "whoomp — WHOOP 4.0, unlocked",
+        "whoomp — local-first biometrics",
         "M101 (Pinwheel Galaxy)",
       ].includes(e.title)
     );
@@ -1294,14 +1294,14 @@ const WORK = [
       venue: "Chrome Extension (MV3) · 2026",
       tags: ["typescript", "computer vision", "local-first", "product"],
       desc:
-        "A focus tool that verifies you actually stayed heads-down. Local webcam gaze-tracking + hard site-blocking turn real focus time into a shareable, accumulating record — 100% on-device, no backend.",
+        "A Chrome extension (MV3) that verifies focus sessions with on-device computer vision. Pairs webcam gaze estimation (eye-blendshapes + head pose, with hysteresis to avoid false flags) with site-blocking via declarativeNetRequest, and logs per-session focus metrics locally. No backend.",
       details: (
         <div className="space-y-4 text-sm max-w-3xl mx-auto">
           <p className="text-zinc-700 leading-relaxed">
-            Most focus apps ask you to trust yourself. Fixate proves it. It calibrates a personal
-            gaze baseline before every session, then watches — locally — for the moment your
-            attention drifts, blocks your distraction sites, and notices when you leave the browser
-            entirely. The session becomes a verifiable record of real, attributed focus time.
+            Fixate calibrates a personal gaze baseline at the start of each session, then runs
+            inference on the webcam feed locally to detect when attention drifts off-screen, blocks
+            a chosen set of distracting sites, and flags when the browser loses focus. Each session
+            produces an attributed, verifiable record of focus time rather than a self-reported one.
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-zinc-200 p-3">
@@ -1345,26 +1345,27 @@ const WORK = [
       clickable: true,
     },
     {
-      title: "whoomp — WHOOP 4.0, unlocked",
-      venue: "Reverse Engineering · iOS",
-      tags: ["reverse engineering", "bluetooth le", "react native", "expo"],
+      title: "whoomp — local-first biometrics",
+      venue: "On-device health app · iOS",
+      tags: ["local-first", "on-device", "bluetooth le", "react native"],
       desc:
-        "Reverse-engineered the WHOOP 4.0 strap's Bluetooth protocol and built a local-only iOS app that reads raw biometrics straight off the band — computing HRV, recovery, and strain on-device. No subscription, no cloud.",
+        "A local-first iOS app (React Native / Expo) that reads live biometrics from a wearable over Bluetooth LE and computes HRV, recovery, and strain on-device. Decodes the raw framed sensor stream at the byte level and persists sessions locally with SQLite — no cloud or account.",
       details: (
         <div className="space-y-4 text-sm max-w-3xl mx-auto">
           <p className="text-zinc-700 leading-relaxed">
-            A commercial fitness strap locks your own biometric data behind a monthly subscription.
-            whoomp takes it back. By decoding the strap's proprietary Bluetooth LE protocol, the app
-            talks to the hardware directly — pulling raw heart-rate and sensor streams and computing
-            recovery metrics locally, with nothing leaving the phone.
+            whoomp connects to a wearable over Bluetooth LE, decodes its raw sensor stream, and
+            runs the HRV / recovery / strain pipeline directly on the phone. There is no backend
+            service — biometric data is captured, processed, and stored entirely on-device. The
+            harder parts were on the signal side: reading and framing the BLE data correctly, then
+            turning it into stable derived metrics.
           </p>
           <div className="rounded-xl border border-zinc-200 p-3">
-            <div className="font-medium mb-1">Protocol work</div>
+            <div className="font-medium mb-1">Signal &amp; systems work</div>
             <ul className="list-disc pl-5 text-xs text-zinc-600 space-y-1">
-              <li>Mapped the custom GATT service and its command / event / data characteristics</li>
-              <li>Decoded the framed command format with a matched <code>CRC-32</code> parameter set</li>
-              <li>Parsed the 96-byte realtime packet from the strap's data stream</li>
-              <li>Drove the standard Heart-Rate characteristic after issuing the enable-broadcast command</li>
+              <li>Talks directly to the wearable's sensors over a custom Bluetooth LE service</li>
+              <li>Decodes the raw, framed data stream at the byte level (<code>CRC-32</code> checked)</li>
+              <li>Parses real-time biometric packets into a continuous live signal</li>
+              <li>Computes HRV, recovery, and strain fully on-device — no server round-trip</li>
             </ul>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
@@ -1374,8 +1375,8 @@ const WORK = [
             <span className="rounded-lg border border-zinc-200 px-2 py-0.5">EAS Build</span>
           </div>
           <p className="text-xs text-zinc-500 italic">
-            A systems + protocol project: BLE, byte-level framing, and on-device signal processing —
-            wrapped in a clean dashboard.
+            A local-first systems project: Bluetooth LE, byte-level signal decoding, and an on-device
+            health engine — wrapped in a clean dashboard.
           </p>
         </div>
       ),
@@ -1386,14 +1387,15 @@ const WORK = [
       venue: "Personal Dashboard · Local SLMs",
       tags: ["node", "local SLM", "ollama", "sqlite"],
       desc:
-        "A brain-dump dashboard that runs on local language models. Type anything and two on-device SLMs categorize priority and estimate time in parallel; natural-language dates auto-pin to a calendar; everything syncs via SQLite. No cloud, no subscriptions.",
+        "A local-first productivity dashboard that classifies task priority and estimates effort using two small language models running in parallel through Ollama. Adds natural-language date parsing, a calendar view, and SQLite-backed cross-device sync. Node/Express, no build step.",
       details: (
         <div className="space-y-4 text-sm max-w-3xl mx-auto">
           <p className="text-zinc-700 leading-relaxed">
-            One input box, zero ceremony. Dump a messy thought — <em>"call bank tmr, fix login bug,
-            brunch this weekend"</em> — and kōdō cleans up the title, assigns a priority, estimates
-            how long it'll take, and pins anything dated to the calendar. The intelligence runs
-            entirely on local models, so it's fast, private, and free to run.
+            Input is a single text box. A submitted note — e.g. <em>"call bank tmr, fix login bug,
+            brunch this weekend"</em> — is cleaned into a title, classified into a priority tier by
+            one local model, and given an effort estimate by a second model running concurrently;
+            dated phrases are parsed and placed on a calendar. All inference runs locally through
+            Ollama, so there are no API costs or network round-trips.
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-zinc-200 p-3">
@@ -1426,13 +1428,14 @@ const WORK = [
       venue: "Market & Compliance Terminal",
       tags: ["next.js", "react", "fintech", "data viz"],
       desc:
-        "A real-time crypto regulatory and market-intelligence terminal for the Americas — live market stats, ETF flows, a compliance calendar, and CBDC / stablecoin trackers packed into one trading-desk-style view.",
+        "A real-time dashboard (Next.js 16 / React 19 / Recharts) that aggregates crypto market data and Americas regulatory signals into a single view — live market stats, ETF flows, a compliance calendar, and CBDC / stablecoin trackers, fed by public APIs and RSS.",
       details: (
         <div className="space-y-4 text-sm max-w-3xl mx-auto">
           <p className="text-zinc-700 leading-relaxed">
-            Crypto regulation moves faster than anyone can read. CryptoRadar pulls the market and the
-            policy picture into a single dense dashboard: what's happening to price and ETF demand
-            right now, and what's happening to the rules underneath it across the Americas.
+            CryptoRadar combines two data domains that are usually tracked separately — market
+            activity and regulatory developments — into one dashboard. The market side pulls live
+            prices, ETF flows, and correlations; the regulatory side tracks policy status, compliance
+            dates, and CBDC / stablecoin activity across the Americas.
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-zinc-200 p-3">
@@ -1465,14 +1468,14 @@ const WORK = [
       venue: "Embedded / Robotics · ESP32",
       tags: ["esp32", "embedded", "local SLM", "hardware"],
       desc:
-        "A palm-sized desk-companion robot: an ESP32 with a touchscreen face running a small language model, iterated across several hardware revisions. An endearingly-ugly (dasai) pet that lives on your desk.",
+        "An ESP32-based desk companion that runs a small language model on-device behind an animated LVGL touchscreen face. Firmware written in C++ / PlatformIO, iterated across several hardware revisions.",
       details: (
         <div className="space-y-4 text-sm max-w-3xl mx-auto">
           <p className="text-zinc-700 leading-relaxed">
-            Mochi is a hardware love-letter to the idea that AI can have a physical body and a
-            personality. Built on an ESP32 with a touchscreen display, it wears an expressive
-            animated face and is driven by a small language model — a companion, not an assistant.
-            The project has gone through multiple hardware and firmware revisions.
+            Mochi is an ESP32-based desk robot with a touchscreen display and an animated face,
+            driven by a small language model. It's an exploration of embedded firmware and display
+            pipelines — fitting model-driven behaviour and a responsive LVGL UI onto constrained
+            hardware — across several board and firmware revisions.
           </p>
           <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
             <span className="rounded-lg border border-zinc-200 px-2 py-0.5">ESP32</span>
@@ -1493,7 +1496,7 @@ const WORK = [
       venue: "Crypto / Finance · In progress",
       tags: ["python", "finance", "crypto", "local SLM"],
       desc:
-        "An algorithmic trading bot for XRP that pairs classical signals with a local small language model for early-stage predictive modeling. Actively in development.",
+        "A Python trading bot for XRP that combines classical quantitative signals with a locally-hosted small language model for short-horizon predictive modeling. In development.",
       details: (
         <div className="space-y-3 text-sm max-w-3xl mx-auto">
           <p className="text-zinc-700 leading-relaxed">
