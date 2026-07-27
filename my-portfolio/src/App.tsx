@@ -631,13 +631,13 @@ function ActiveCard({ id }: { id: string }) {
 function mockGraph() {
   const nodes = [
     // Builds / products (top band)
-    { id: "fixate", label: "Fixate — Verified Focus", kind: "Project", x: 110, y: 70, note: "Local-CV Chrome extension that verifies real focus time." },
+    { id: "fixate", label: "Fixate", kind: "Project", x: 110, y: 70, note: "Local-CV Chrome extension that verifies real focus time." },
     { id: "whoomp", label: "whoomp", kind: "Project", x: 290, y: 70, note: "Local-first health app: reads biometrics over BLE, computes recovery on-device." },
     { id: "kodo", label: "kōdō", kind: "Project", x: 470, y: 70, note: "Productivity dashboard driven by local SLMs." },
     { id: "cryptoradar", label: "CryptoRadar", kind: "Project", x: 650, y: 70, note: "Crypto regulatory + market intelligence terminal." },
     { id: "options", label: "Options Chain Analytics", kind: "Project", x: 110, y: 150, note: "Analytics for historical options chain data." },
     { id: "tradingbot", label: "XRP Trading Bot", kind: "Project", x: 290, y: 150, note: "Algorithmic trading bot pairing signals with a local SLM." },
-    { id: "mochi", label: "Mochi (AI desk robot)", kind: "Project", x: 470, y: 150, note: "ESP32 desk companion running a small language model." },
+    { id: "mochi", label: "Mochi desk robot", kind: "Project", x: 470, y: 150, note: "ESP32 desk companion running a small language model." },
     { id: "cubesat", label: "CubeSat (Ukpik-1)", kind: "Project", x: 650, y: 150, note: "Radio ground station for the Ukpik-1 CubeSat." },
     // Research (middle band)
     { id: "galaxy", label: "Galactic Mapping ML", kind: "Research", x: 200, y: 235, note: "ML classification for galactic components (JWST)." },
@@ -698,8 +698,8 @@ function CommandPalette({
     const pages = SEARCH_INDEX.filter((e) => e.kind === "Page");
     const featured = SEARCH_INDEX.filter((e) =>
       [
-        "Fixate — verified focus",
-        "whoomp — local-first biometrics",
+        "Fixate",
+        "whoomp",
         "M101 (Pinwheel Galaxy)",
       ].includes(e.title)
     );
@@ -1290,7 +1290,7 @@ function TaoistPhilosophyNote({ onBack }: { onBack: () => void }) {
 // =========================================================
 const WORK = [
     {
-      title: "Fixate — verified focus",
+      title: "Fixate",
       venue: "Chrome Extension (MV3) · 2026",
       tags: ["typescript", "computer vision", "local-first", "product"],
       desc:
@@ -1345,7 +1345,7 @@ const WORK = [
       clickable: true,
     },
     {
-      title: "whoomp — local-first biometrics",
+      title: "whoomp",
       venue: "On-device health app · iOS",
       tags: ["local-first", "on-device", "bluetooth le", "react native"],
       desc:
@@ -1383,7 +1383,7 @@ const WORK = [
       clickable: true,
     },
     {
-      title: "kōdō — local-first productivity OS",
+      title: "kōdō",
       venue: "Personal Dashboard · Local SLMs",
       tags: ["node", "local SLM", "ollama", "sqlite"],
       desc:
@@ -1424,7 +1424,7 @@ const WORK = [
       clickable: true,
     },
     {
-      title: "CryptoRadar — regulatory intelligence",
+      title: "CryptoRadar",
       venue: "Market & Compliance Terminal",
       tags: ["next.js", "react", "fintech", "data viz"],
       desc:
@@ -1435,7 +1435,8 @@ const WORK = [
             CryptoRadar combines two data domains that are usually tracked separately — market
             activity and regulatory developments — into one dashboard. The market side pulls live
             prices, ETF flows, and correlations; the regulatory side tracks policy status, compliance
-            dates, and CBDC / stablecoin activity across the Americas.
+            dates, and CBDC / stablecoin activity across the Americas. The dense, single-screen
+            layout is inspired by real-time world-monitor dashboards.
           </p>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-zinc-200 p-3">
@@ -1464,7 +1465,7 @@ const WORK = [
       clickable: true,
     },
     {
-      title: "Mochi — AI desk companion",
+      title: "Mochi desk robot",
       venue: "Embedded / Robotics · ESP32",
       tags: ["esp32", "embedded", "local SLM", "hardware"],
       desc:
