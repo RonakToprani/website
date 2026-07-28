@@ -1385,6 +1385,66 @@ const WORK = [
               <li>Computes HRV, recovery, and strain fully on-device — no server round-trip</li>
             </ul>
           </div>
+
+          {/* Methodology — stress */}
+          <div className="rounded-xl border border-zinc-200 p-4">
+            <div className="grid md:grid-cols-2 gap-4 items-start">
+              <div className="space-y-2 text-xs text-zinc-600 leading-relaxed">
+                <div className="font-medium text-sm text-zinc-900">How the stress score works</div>
+                <p>
+                  Stress is inferred from heart rate sitting <b>above your resting baseline while
+                  the accelerometer shows you're still</b> — motion is explicitly excluded, so a
+                  workout registers as strain, not stress. This gating is the key to not confusing
+                  physical exertion with physiological stress.
+                </p>
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-2 font-mono text-[11px] text-zinc-700 overflow-x-auto">
+                  stress(t) = f( HR(t) − HR_rest ) · 𝟙[ motion(t) &lt; θ ]
+                </div>
+                <p>
+                  Each moment is binned <b>Low / Med / High</b> by how far HR is elevated (and how
+                  compressed HRV is), and the day is aggregated into a single 0–100 score — lower is
+                  calmer. Plotting it across the day, over the sleep window, shows when the load
+                  actually landed.
+                </p>
+              </div>
+              <div>
+                <img
+                  src="/whoompstress.jpg"
+                  alt="whoomp stress-through-the-day methodology"
+                  className="rounded-lg border border-zinc-200 w-full"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Methodology — sleep staging */}
+          <div className="rounded-xl border border-zinc-200 p-4">
+            <div className="grid md:grid-cols-2 gap-4 items-start">
+              <div className="space-y-2 text-xs text-zinc-600 leading-relaxed">
+                <div className="font-medium text-sm text-zinc-900">How sleep is staged</div>
+                <p>
+                  Sleep stages — awake, REM, light, and deep — are inferred per epoch by fusing
+                  accelerometer <b>actigraphy</b> (movement gates awake vs. asleep) with <b>heart
+                  rate</b> and <b>HRV</b>. Deep sleep shows a low, stable HR and high parasympathetic
+                  tone; REM shows waking-like HR with high autonomic variability. Labels are smoothed
+                  with a transition model so stages don't flicker between epochs.
+                </p>
+                <p>
+                  The night rolls up into <b>Restorative</b> time (REM + deep), per-stage durations,
+                  and a <b>Sleep Need</b> target built from your baseline plus accrued
+                  <b> sleep debt</b> and same-day <b>strain</b>.
+                </p>
+              </div>
+              <div>
+                <img
+                  src="/whoompsleep.jpg"
+                  alt="whoomp sleep staging and sleep-need methodology"
+                  className="rounded-lg border border-zinc-200 w-full"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
             <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Expo (SDK 52+)</span>
             <span className="rounded-lg border border-zinc-200 px-2 py-0.5">react-native-ble-plx</span>
