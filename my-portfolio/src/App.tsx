@@ -1359,6 +1359,23 @@ const WORK = [
             harder parts were on the signal side: reading and framing the BLE data correctly, then
             turning it into stable derived metrics.
           </p>
+          <figure className="space-y-1.5">
+            <div className="rounded-2xl border border-zinc-200 overflow-hidden bg-black mx-auto w-full max-w-[260px]">
+              <video
+                src="/whoomp.mp4"
+                controls
+                loop
+                muted
+                autoPlay
+                playsInline
+                preload="metadata"
+                className="w-full block"
+              />
+            </div>
+            <figcaption className="text-xs text-zinc-500 text-center">
+              Demo — live biometrics streaming off the wearable over Bluetooth into the on-device dashboard.
+            </figcaption>
+          </figure>
           <div className="rounded-xl border border-zinc-200 p-3">
             <div className="font-medium mb-1">Signal &amp; systems work</div>
             <ul className="list-disc pl-5 text-xs text-zinc-600 space-y-1">
