@@ -1513,6 +1513,14 @@ const WORK = [
             <li><b>Now / next / later</b> layout with an estimated-hours task timeline</li>
             <li><b>Stack:</b> Node + Express, better-sqlite3, Chart.js, Ollama, zero build step</li>
           </ul>
+          <a
+            href="https://github.com/RonakToprani/kodo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
+          >
+            View on GitHub <ExternalLink className="size-3.5" />
+          </a>
         </div>
       ),
       clickable: true,
