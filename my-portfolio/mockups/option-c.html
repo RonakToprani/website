@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Option C — Your site, refined · ronak.to mockup</title>
+<style>
+/* ============================================================
+   OPTION C — THE ORIGINAL, REFINED
+   Same system font. Same zinc neutrals. Same sidebar pills,
+   same rounded cards, same NotionSurface.
+   What changed: spacing rhythm, type scale, surface layering,
+   hover states, focus states, and a real dark mode.
+   ============================================================ */
+:root{
+  --page:#FAFAFA;
+  --surface:#FFFFFF;
+  --surface-2:#F7F7F8;
+  --surface-3:#F1F1F2;
+  --ink:#18181B;
+  --ink-2:#3F3F46;
+  --muted:#71717A;
+  --faint:#A1A1AA;
+  --border:#E7E7EA;
+  --border-2:#D9D9DE;
+  --invert-bg:#18181B;
+  --invert-fg:#FAFAFA;
+  --ring:#18181B;
+  --sh-1:0 1px 2px rgba(24,24,27,.04);
+  --sh-2:0 1px 3px rgba(24,24,27,.06), 0 1px 2px rgba(24,24,27,.04);
+  --sh-3:0 12px 32px -8px rgba(24,24,27,.14), 0 2px 6px rgba(24,24,27,.06);
+  --sh-4:0 28px 70px -16px rgba(24,24,27,.26), 0 4px 12px rgba(24,24,27,.08);
+  --r-1:8px; --r-2:12px; --r-3:16px; --r-4:22px;
+  --e:cubic-bezier(.2,.8,.3,1);
+}
+[data-theme="dark"]{
+  --page:#0B0B0C;
+  --surface:#141416;
+  --surface-2:#1A1A1D;
+  --surface-3:#202024;
+  --ink:#EDEDF0;
+  --ink-2:#C4C4CB;
+  --muted:#8F8F99;
+  --faint:#68686F;
+  --border:rgba(255,255,255,.075);
+  --border-2:rgba(255,255,255,.14);
+  --invert-bg:#EDEDF0;
+  --invert-fg:#141416;
+  --ring:#8F8F99;
+  --sh-1:none;
+  --sh-2:0 1px 2px rgba(0,0,0,.5);
+  --sh-3:0 12px 32px -8px rgba(0,0,0,.65);
+  --sh-4:0 28px 70px -16px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.05);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--page); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  transition:background .3s var(--e), color .3s var(--e);
+}
+h1,h2,h3,h4{margin:0; font-weight:600; letter-spacing:-.018em; line-height:1.25}
+p{margin:0}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+a{color:inherit}
+img{display:block; max-width:100%}
+::selection{background:var(--surface-3)}
+:focus-visible{outline:2px solid var(--ring); outline-offset:2px; border-radius:6px}
+
+/* ---------- header ---------- */
+.hdr{
+  position:sticky; top:0; z-index:40;
+  border-bottom:1px solid var(--border);
+  background:color-mix(in srgb, var(--page) 80%, transparent);
+  backdrop-filter:saturate(1.6) blur(12px);
+}
+.hdr-in{max-width:1240px; margin:0 auto; display:flex; align-items:center; gap:12px; padding:12px 24px}
+.logo{width:20px;height:20px;border-radius:5px;background:var(--invert-bg);color:var(--invert-fg);
+  display:grid;place-items:center;font-size:11px;font-weight:600;flex:none}
+.hdr .sep{color:var(--faint); font-size:14px}
+.hdr .where{font-size:14px; color:var(--ink-2)}
+.grow{flex:1}
+.search{
+  display:flex; align-items:center; gap:8px; height:32px; padding:0 8px 0 11px;
+  border:1px solid var(--border); border-radius:var(--r-1); background:var(--surface);
+  color:var(--muted); font-size:13.5px;
+  transition:border-color .16s var(--e), box-shadow .16s var(--e);
+}
+.search:hover{border-color:var(--border-2); box-shadow:var(--sh-1)}
+.search kbd{font:inherit; font-size:11px; color:var(--faint); border:1px solid var(--border);
+  border-radius:4px; padding:0 4px; line-height:16px}
+.ibtn{width:32px;height:32px;border-radius:var(--r-1);display:grid;place-items:center;color:var(--muted);
+  transition:background .16s var(--e), color .16s var(--e)}
+.ibtn:hover{background:var(--surface-3); color:var(--ink)}
+.ibtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- shell ---------- */
+.shell{max-width:1240px; margin:0 auto; display:grid; grid-template-columns:212px 1fr; gap:20px; padding:20px 24px 64px}
+
+/* ---------- sidebar ---------- */
+.side{position:sticky; top:69px; align-self:start; display:flex; flex-direction:column; gap:6px}
+.nav{display:flex; flex-direction:column; gap:4px}
+.nav button{
+  display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  padding:8px 11px; border-radius:var(--r-2); font-size:14px; color:var(--ink-2);
+  border:1px solid transparent;
+  transition:background .16s var(--e), color .16s var(--e), border-color .16s var(--e);
+}
+.nav button svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:var(--faint);transition:color .16s var(--e)}
+.nav button:hover{background:var(--surface-2); color:var(--ink)}
+.nav button:hover svg{color:var(--muted)}
+.nav button.on{background:var(--invert-bg); color:var(--invert-fg); border-color:var(--invert-bg); font-weight:500}
+.nav button.on svg{color:var(--invert-fg); opacity:.75}
+.tip{margin-top:12px; padding:11px 12px; border:1px dashed var(--border-2); border-radius:var(--r-2);
+  font-size:12.5px; line-height:1.6; color:var(--muted)}
+.tip kbd{font:inherit; font-size:11.5px; color:var(--ink-2); background:var(--surface-3);
+  border-radius:4px; padding:1px 5px}
+
+/* ---------- surface ---------- */
+.surface{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r-4);
+  box-shadow:var(--sh-2); padding:32px 36px 40px; min-height:calc(100vh - 160px);
+}
+.phead{margin-bottom:28px}
+.phead h1{font-size:28px; letter-spacing:-.028em}
+.phead .sub{color:var(--muted); margin-top:7px; font-size:15px; max-width:62ch}
+
+.fade{opacity:0; transform:translateY(8px); animation:fade .38s var(--e) forwards}
+@keyframes fade{to{opacity:1;transform:none}}
+
+/* ---------- home ---------- */
+.hero h1{font-size:clamp(28px,3.6vw,38px); letter-spacing:-.032em; line-height:1.15; font-weight:600}
+.hero .bio{color:var(--muted); font-size:16px; line-height:1.68; max-width:62ch; margin-top:16px}
+.hero .bio b{color:var(--ink); font-weight:500}
+.portrait{margin-top:26px; border:1px solid var(--border); border-radius:var(--r-3); overflow:hidden; max-width:560px}
+.portrait img{width:100%; aspect-ratio:16/10; object-fit:cover}
+
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(216px,1fr)); gap:12px; margin-top:28px}
+.card{
+  border:1px solid var(--border); border-radius:var(--r-3); padding:16px 17px; background:var(--surface);
+  transition:border-color .18s var(--e), background .18s var(--e);
+}
+.card:hover{border-color:var(--border-2); background:var(--surface-2)}
+.card .lbl{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted); margin-bottom:9px}
+.card .lbl svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7}
+.card .txt{font-size:14px; line-height:1.6; color:var(--ink-2)}
+.card .txt b{color:var(--ink); font-weight:500}
+
+.jump{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-top:14px}
+.jump button{
+  border:1px solid var(--border); border-radius:var(--r-2); padding:12px 14px; text-align:left;
+  transition:border-color .18s var(--e), background .18s var(--e), transform .18s var(--e);
+}
+.jump button:hover{border-color:var(--border-2); background:var(--surface-2)}
+.jump .t{font-size:14px; font-weight:500}
+.jump .s{font-size:12.5px; color:var(--faint); margin-top:3px}
+
+/* ---------- work ---------- */
+.filters{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px}
+.filters button{
+  padding:5px 12px; border:1px solid var(--border); border-radius:999px; font-size:13px; color:var(--muted);
+  transition:border-color .16s var(--e), color .16s var(--e), background .16s var(--e);
+}
+.filters button:hover{border-color:var(--border-2); color:var(--ink)}
+.filters button.on{background:var(--invert-bg); border-color:var(--invert-bg); color:var(--invert-fg)}
+
+.items{display:flex; flex-direction:column; gap:10px}
+.item{
+  display:block; width:100%; text-align:left;
+  border:1px solid var(--border); border-radius:var(--r-3); padding:16px 18px; background:var(--surface);
+  transition:border-color .18s var(--e), background .18s var(--e), box-shadow .18s var(--e);
+}
+.item:hover{border-color:var(--border-2); background:var(--surface-2); box-shadow:var(--sh-1)}
+.item .meta{display:flex; flex-wrap:wrap; align-items:center; gap:7px; font-size:12.5px; color:var(--muted)}
+.item h3{font-size:16px; margin-top:7px; font-weight:600}
+.item p{font-size:14px; color:var(--ink-2); line-height:1.6; margin-top:6px; max-width:74ch}
+.tag{border:1px solid var(--border); border-radius:6px; padding:1px 7px; font-size:11.5px; color:var(--muted)}
+
+/* ---------- notes ---------- */
+.note{
+  display:block; width:100%; text-align:left; border:1px solid var(--border); border-radius:var(--r-3);
+  padding:16px 18px; transition:border-color .18s var(--e), background .18s var(--e);
+}
+.note:hover{border-color:var(--border-2); background:var(--surface-2)}
+.note .date{font-size:12.5px; color:var(--muted)}
+.note h3{font-size:16px; margin-top:6px}
+.note p{font-size:14px; color:var(--ink-2); margin-top:5px; line-height:1.6}
+
+.sechead{font-size:18px; margin-top:36px}
+.secsub{color:var(--muted); font-size:14px; margin-top:7px; max-width:64ch}
+.astro{display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:14px; margin-top:18px}
+.obj{border:1px solid var(--border); border-radius:var(--r-3); padding:14px; background:var(--surface);
+  transition:border-color .18s var(--e), background .18s var(--e)}
+.obj:hover{border-color:var(--border-2)}
+.obj .name{font-size:14.5px; font-weight:500}
+.obj .shots{display:flex; gap:8px; margin-top:10px}
+.obj .shots button{border-radius:var(--r-1); overflow:hidden; border:1px solid var(--border); flex:1;
+  transition:transform .25s var(--e)}
+.obj .shots button:hover{transform:scale(1.03)}
+.obj .shots img{width:100%; aspect-ratio:1; object-fit:cover}
+.obj p{font-size:13px; color:var(--muted); line-height:1.55; margin-top:11px}
+
+/* ---------- contact ---------- */
+.rows{border-top:1px solid var(--border)}
+.rows .r{display:flex; gap:16px; padding:13px 2px; border-bottom:1px solid var(--border); font-size:14.5px}
+.rows .r .k{color:var(--muted); min-width:110px; flex:none}
+
+/* ---------- overlays ---------- */
+.scrim{position:fixed; inset:0; z-index:60; background:rgba(24,24,27,.34); opacity:0; pointer-events:none;
+  transition:opacity .26s var(--e); backdrop-filter:blur(2px)}
+.scrim.on{opacity:1; pointer-events:auto}
+[data-theme="dark"] .scrim{background:rgba(0,0,0,.62)}
+
+.modal{
+  position:fixed; z-index:70; top:50%; left:50%; width:min(760px,92vw); max-height:84vh; overflow-y:auto;
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r-4); box-shadow:var(--sh-4);
+  transform:translate(-50%,-48%) scale(.98); opacity:0; pointer-events:none;
+  transition:transform .3s var(--e), opacity .24s var(--e);
+}
+.modal.on{transform:translate(-50%,-50%) scale(1); opacity:1; pointer-events:auto}
+.mhead{position:sticky; top:0; display:flex; align-items:flex-start; gap:14px; padding:22px 26px 16px;
+  background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border)}
+.mhead h2{font-size:20px}
+.mhead .v{font-size:13px; color:var(--muted); margin-top:5px}
+.mbody{padding:22px 26px 32px}
+.mbody > p{font-size:14.5px; color:var(--ink-2); line-height:1.72}
+.mgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px}
+.mcard{border:1px solid var(--border); border-radius:var(--r-2); padding:14px; background:var(--surface-2)}
+.mcard .t{font-size:13.5px; font-weight:600; margin-bottom:6px}
+.mcard .d{font-size:13px; color:var(--muted); line-height:1.58}
+.mlist{list-style:none; margin:18px 0 0; padding:0}
+.mlist li{display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); font-size:13.5px; color:var(--muted)}
+.mlist li:last-child{border-bottom:none}
+.mlist b{color:var(--ink); font-weight:500; min-width:150px; flex:none}
+
+/* ---------- palette ---------- */
+.pal{position:fixed; z-index:80; top:13vh; left:50%; width:min(540px,92vw);
+  transform:translate(-50%,-8px) scale(.985); opacity:0; pointer-events:none;
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r-3); box-shadow:var(--sh-4);
+  overflow:hidden; transition:transform .24s var(--e), opacity .2s var(--e)}
+.pal.on{transform:translate(-50%,0) scale(1); opacity:1; pointer-events:auto}
+.pal .top{display:flex; align-items:center; gap:10px; padding:13px 15px; border-bottom:1px solid var(--border)}
+.pal input{flex:1; border:none; background:none; font:inherit; font-size:15px; color:var(--ink); outline:none}
+.pal input::placeholder{color:var(--faint)}
+.pal .list{max-height:322px; overflow-y:auto; padding:6px}
+.pal .row{display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:8px 11px;
+  border-radius:var(--r-1); transition:background .13s var(--e)}
+.pal .row:hover,.pal .row.sel{background:var(--surface-2)}
+.pal .kind{font-size:11px; padding:2px 7px; border-radius:5px; flex:none; border:1px solid var(--border); color:var(--muted)}
+.pal .kind.project{background:var(--invert-bg); color:var(--invert-fg); border-color:var(--invert-bg)}
+.pal .tt{font-size:14px}
+.pal .ss{font-size:12.5px; color:var(--faint); margin-top:1px}
+.pal .foot{display:flex; gap:14px; padding:8px 15px; border-top:1px solid var(--border); font-size:12px; color:var(--faint)}
+
+/* ---------- footer ---------- */
+.foot{border-top:1px solid var(--border); margin-top:8px}
+.foot-in{max-width:1240px; margin:0 auto; padding:20px 24px; display:flex; align-items:center; gap:12px;
+  font-size:13.5px; color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:#3B82F6; animation:blink 2.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ---------- mockup strip ---------- */
+.strip{max-width:1240px;margin:0 auto;padding:8px 24px;font-size:12px;color:var(--faint);
+  border-bottom:1px dashed var(--border); display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+
+@media (max-width:880px){
+  .shell{grid-template-columns:1fr; padding:14px 14px 56px}
+  .side{position:static}
+  .nav{flex-direction:row; overflow-x:auto; padding-bottom:4px; gap:6px}
+  .nav button{white-space:nowrap; width:auto}
+  .tip{display:none}
+  .surface{padding:22px 18px 30px; border-radius:var(--r-3); min-height:0}
+  .hdr-in,.strip,.foot-in{padding-left:14px;padding-right:14px}
+  .mgrid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-in">
+    <span class="logo">R</span>
+    <span class="sep">/</span>
+    <span class="where" id="where">Portfolio</span>
+    <span class="grow"></span>
+    <button class="search" id="opensearch">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
+      Search <kbd>⌘K</kbd>
+    </button>
+    <button class="ibtn" id="theme" aria-label="Toggle theme">
+      <svg id="ticon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="strip">Option C — your original, refined. Same system font, same zinc palette, same sidebar pills and cards. Toggle dark mode top-right.</div>
+
+<div class="shell">
+  <aside class="side">
+    <nav class="nav">
+      <button class="on" data-p="home"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+      <button data-p="work"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"/><ellipse cx="12" cy="12" rx="9.5" ry="4.2"/><ellipse cx="12" cy="12" rx="9.5" ry="4.2" transform="rotate(60 12 12)"/></svg>Projects + Research</button>
+      <button data-p="notes"><svg viewBox="0 0 24 24"><path d="M4 4h9l7 7v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M13 4v7h7"/></svg>Notes</button>
+      <button data-p="graph"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="8" r="2.2"/><circle cx="11" cy="18" r="2.2"/><path d="M8.1 6.9l7.8.8M7.5 8.1 10 15.8M16.5 10l-4 6"/></svg>Idea Graph</button>
+      <button data-p="contact"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M4.6 20c1.2-3.9 3.9-5.9 7.4-5.9s6.2 2 7.4 5.9"/></svg>Contact</button>
+    </nav>
+    <div class="tip">Press <kbd>/</kbd> or <kbd>⌘K</kbd> to open the palette.</div>
+  </aside>
+
+  <main class="surface">
+
+    <!-- HOME -->
+    <section id="p-home">
+      <div class="hero fade">
+        <h1>Builds, research, and a lot of sky.</h1>
+        <p class="bio">I'm <b>Ronak Toprani</b> — I work on tech in finance by day and build products the rest of the time. Lately that means <b>local-first tools</b> and <b>small on-device AI</b>: focus software, wearables, and desk robots. I also love physics, astrophotography, and philosophy. This is where it all lives.</p>
+        <div class="portrait"><img src="../public/home.jpeg" alt="Ronak Toprani"></div>
+      </div>
+
+      <div class="cards fade" style="animation-delay:.05s">
+        <div class="card">
+          <span class="lbl"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"/><ellipse cx="12" cy="12" rx="9.5" ry="4.2"/></svg>Latest build</span>
+          <div class="txt"><b>Fixate</b> — a Chrome extension that <i>verifies</i> focus with local, on-device gaze detection. No backend, no data leaves the machine.</div>
+        </div>
+        <div class="card">
+          <span class="lbl"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="9" r="2.4"/><path d="M6 8.4v7.2M8.3 7.2 15.7 9"/></svg>Also shipping</span>
+          <div class="txt"><b>whoomp</b> (a local-first health app that reads biometrics on-device) and <b>kōdō</b> (a productivity dashboard run by local SLMs).</div>
+        </div>
+        <div class="card">
+          <span class="lbl"><svg viewBox="0 0 24 24"><path d="M4 4h9l7 7v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/></svg>Recent note</span>
+          <div class="txt">New astrophotography — the C27 Crescent Nebula, M27 Dumbbell, and more, over in the Notes section.</div>
+        </div>
+      </div>
+
+      <div class="jump fade" style="animation-delay:.09s">
+        <button data-go="work"><span class="t">Explore Projects</span><span class="s">Jump right in →</span></button>
+        <button data-go="notes"><span class="t">Read Notes</span><span class="s">Jump right in →</span></button>
+        <button data-go="graph"><span class="t">Open Idea Graph</span><span class="s">Jump right in →</span></button>
+        <button data-go="contact"><span class="t">Connect with Me</span><span class="s">Jump right in →</span></button>
+      </div>
+    </section>
+
+    <!-- WORK -->
+    <section id="p-work" hidden>
+      <div class="phead fade">
+        <h1>Projects + Research</h1>
+        <p class="sub">Selected research, builds, and experiments.</p>
+      </div>
+      <div class="filters fade" style="animation-delay:.03s" id="filters"></div>
+      <div class="items" id="items"></div>
+    </section>
+
+    <!-- NOTES -->
+    <section id="p-notes" hidden>
+      <div class="phead fade">
+        <h1>Notes</h1>
+        <p class="sub">Short notes, and a growing astrophotography log.</p>
+      </div>
+      <button class="note fade" style="animation-delay:.03s">
+        <span class="date">Aug 2025</span>
+        <h3>aims without attachment</h3>
+        <p>a personal take on Taoism — dropping the enforcement, and aiming high while letting go of the outcome.</p>
+      </button>
+
+      <h2 class="sechead fade" style="animation-delay:.06s">Astrophotography</h2>
+      <p class="secsub fade" style="animation-delay:.06s">These photos are either taken with a Seestar S50 telescope or a canon mirrorless camera. In both cases, images are taken with long exposures and stacked.</p>
+      <div class="astro" id="astro"></div>
+    </section>
+
+    <!-- GRAPH -->
+    <section id="p-graph" hidden>
+      <div class="phead fade">
+        <h1>Idea Graph</h1>
+        <p class="sub">A current map linking projects, papers, and concepts.</p>
+      </div>
+      <div class="card fade" style="animation-delay:.03s; text-align:center; padding:44px 24px">
+        <p style="color:var(--muted); font-size:14.5px; max-width:44ch; margin:0 auto">The live force-directed graph is prototyped separately so it can be tuned on its own.</p>
+        <a href="./graph-lab.html" style="display:inline-block; margin-top:16px; padding:8px 16px; border:1px solid var(--border-2); border-radius:var(--r-2); text-decoration:none; font-size:14px">Open graph-lab.html →</a>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="p-contact" hidden>
+      <div class="phead fade">
+        <h1>Reach Out</h1>
+        <p class="sub">hmu for collaborations, questions, or just to say hi.</p>
+      </div>
+      <div class="rows fade" style="animation-delay:.03s">
+        <div class="r"><span class="k">Email</span><span>ronaktoprani@gmail.com</span></div>
+        <div class="r"><span class="k">X</span><span>@ronak859</span></div>
+        <div class="r"><span class="k">LinkedIn</span><span>/in/ronaktoprani</span></div>
+        <div class="r"><span class="k">Based in</span><span>Toronto, Ontario</span></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="foot">
+  <div class="foot-in"><span class="dot"></span> based in Toronto</div>
+</footer>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+  <div class="mhead">
+    <div style="flex:1"><h2 id="mtitle"></h2><div class="v" id="mvenue"></div></div>
+    <button class="ibtn" id="mclose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div class="mbody" id="mbody"></div>
+</div>
+
+<div class="pal" id="pal" role="dialog" aria-modal="true" aria-label="Search">
+  <div class="top">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" style="color:var(--faint)"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
+    <input id="q" placeholder="Search anything — projects, galaxies, notes…" autocomplete="off">
+    <kbd style="font-size:11px;color:var(--faint);border:1px solid var(--border);border-radius:4px;padding:0 4px">esc</kbd>
+  </div>
+  <div class="list" id="plist"></div>
+  <div class="foot"><span>↑↓ navigate</span><span>↵ open</span><span style="margin-left:auto" id="pcount"></span></div>
+</div>
+
+<script src="./mockup-data.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const PAGES = ["home","work","notes","graph","contact"];
+const TITLES = {home:"Portfolio", work:"Projects + Research", notes:"Notes", graph:"Idea Graph", contact:"Contact"};
+let cat = "all";
+
+/* ---- work list ---- */
+function drawFilters(){
+  $("#filters").innerHTML = CATS.map(([id,l]) =>
+    `<button class="${id===cat?"on":""}" data-c="${id}">${l}</button>`).join("");
+}
+function drawItems(){
+  const shown = WORK.filter(w => cat==="all" || w.cat.includes(cat));
+  $("#items").innerHTML = shown.map((w,i)=>`
+    <button class="item fade" style="animation-delay:${.04+i*.03}s" data-i="${WORK.indexOf(w)}">
+      <span class="meta"><span>${w.v}</span>${w.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</span>
+      <h3>${w.t}</h3>
+      <p>${w.d}</p>
+    </button>`).join("");
+}
+function drawAstro(){
+  $("#astro").innerHTML = ASTRO.map((a,i)=>`
+    <div class="obj fade" style="animation-delay:${.05+i*.03}s">
+      <div class="name">${a.n}</div>
+      <div class="shots">${a.files.map(f=>`<button><img src="../public/${f}" alt="${a.n}" loading="lazy"></button>`).join("")}</div>
+      <p>${a.d}</p>
+    </div>`).join("");
+}
+drawFilters(); drawItems(); drawAstro();
+$("#filters").onclick = e => { const b=e.target.closest("[data-c]"); if(!b) return; cat=b.dataset.c; drawFilters(); drawItems(); };
+
+/* ---- navigation ---- */
+function go(p){
+  document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.p===p));
+  PAGES.forEach(id => $("#p-"+id).hidden = id!==p);
+  $("#where").textContent = TITLES[p];
+  $("#p-"+p).querySelectorAll(".fade").forEach(el=>{el.style.animation="none";void el.offsetWidth;el.style.animation="";});
+  scrollTo({top:0, behavior:"smooth"});
+}
+document.querySelectorAll(".nav button").forEach(b => b.onclick = () => go(b.dataset.p));
+document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
+
+/* ---- theme ---- */
+const SUN='<path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.7-5.7 1.4-1.4M4.9 19.1l1.4-1.4m11.4 0 1.4 1.4M4.9 4.9l1.4 1.4"/><circle cx="12" cy="12" r="4"/>';
+const MOON='<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+$("#theme").onclick = () => {
+  const dark = document.documentElement.dataset.theme === "dark";
+  document.documentElement.dataset.theme = dark ? "light" : "dark";
+  $("#ticon").innerHTML = dark ? MOON : SUN;
+};
+
+/* ---- modal ---- */
+let lastFocus = null;
+function openModal(i){
+  const w = WORK[i]; lastFocus = document.activeElement;
+  $("#mtitle").textContent = w.t; $("#mvenue").textContent = w.v;
+  $("#mbody").innerHTML = `<p>${w.d}</p>
+    ${w.cards.length?`<div class="mgrid">${w.cards.map(c=>`<div class="mcard"><div class="t">${c[0]}</div><div class="d">${c[1]}</div></div>`).join("")}</div>`:""}
+    ${w.list.length?`<ul class="mlist">${w.list.map(l=>`<li><b>${l[0]}</b><span>${l[1]}</span></li>`).join("")}</ul>`:""}
+    <div class="meta" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:20px">${w.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>`;
+  $("#modal").classList.add("on"); $("#scrim").classList.add("on"); $("#mclose").focus();
+}
+function closeModal(){ $("#modal").classList.remove("on"); $("#scrim").classList.remove("on"); if(lastFocus) lastFocus.focus(); }
+$("#items").onclick = e => { const it = e.target.closest(".item"); if(it) openModal(+it.dataset.i); };
+$("#mclose").onclick = closeModal;
+$("#scrim").onclick = () => { closeModal(); closePal(); };
+
+/* ---- palette ---- */
+const INDEX = [
+  ...PAGES.map(p=>({tt:TITLES[p], ss:"Page", k:"page"})),
+  ...WORK.map(w=>({tt:w.t, ss:w.v, k:"project"})),
+  ...ASTRO.map(a=>({tt:a.n, ss:"Astrophotography · "+a.g, k:"astro"})),
+];
+const fold = s => s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+function drawPal(){
+  const s = fold($("#q").value.trim());
+  const r = s ? INDEX.filter(e => fold(e.tt+" "+e.ss).includes(s)).slice(0,12) : INDEX.slice(0,8);
+  $("#plist").innerHTML = r.map((e,i)=>`<button class="row${i===0?" sel":""}">
+    <span class="kind ${e.k}">${e.k}</span>
+    <span><span class="tt">${e.tt}</span><span class="ss">${e.ss}</span></span></button>`).join("")
+    || `<div style="padding:24px;text-align:center;color:var(--faint);font-size:14px">No results.</div>`;
+  $("#pcount").textContent = r.length + (r.length===1?" result":" results");
+}
+function openPal(){ $("#pal").classList.add("on"); $("#scrim").classList.add("on"); $("#q").value=""; drawPal(); $("#q").focus(); }
+function closePal(){ $("#pal").classList.remove("on"); if(!$("#modal").classList.contains("on")) $("#scrim").classList.remove("on"); }
+$("#opensearch").onclick = openPal;
+$("#q").oninput = drawPal;
+addEventListener("keydown", e => {
+  const typing = /INPUT|TEXTAREA/.test(e.target.tagName);
+  if((e.key.toLowerCase()==="k" && (e.metaKey||e.ctrlKey)) || (e.key==="/" && !typing)){ e.preventDefault(); openPal(); }
+  if(e.key==="Escape"){ closePal(); closeModal(); }
+});
+</script>
+</body>
+</html>

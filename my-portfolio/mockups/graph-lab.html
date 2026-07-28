@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graph Lab — force-directed idea graph · ronak.to mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   GRAPH LAB — real force simulation, 17 nodes / 21 links
+   Hand-rolled. No d3, no external library.
+   ============================================================ */
+:root{
+  --bg:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC;
+  --ink:#1A1815; --muted:#6E6A62; --faint:#9A958A;
+  --border:#E8E4DB; --border-strong:#D8D2C6;
+  --accent:#9A6B2F;
+  --link:#CFC8BA; --link-hot:#9A6B2F;
+  --k-project:#2F6FB5; --k-research:#B0468B; --k-concept:#3E8F72; --k-hobby:#C08A2E;
+  --node-label:#1A1815; --canvas-bg:#FBFAF7;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+[data-theme="dark"]{
+  --bg:#121110; --surface:#1A1917; --surface-2:#211F1C;
+  --ink:#EDEAE3; --muted:#A8A296; --faint:#787166;
+  --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.16);
+  --accent:#D6A45C;
+  --link:rgba(255,255,255,.13); --link-hot:#D6A45C;
+  --k-project:#6FA8E0; --k-research:#E28BC4; --k-concept:#6FC7A4; --k-hobby:#E0B565;
+  --node-label:#EDEAE3; --canvas-bg:#121110;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:Inter,ui-sans-serif,system-ui,sans-serif; font-size:14px;
+  -webkit-font-smoothing:antialiased; overflow:hidden;
+  transition:background .35s var(--ease), color .35s var(--ease);
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace; font-size:10px; letter-spacing:.11em; text-transform:uppercase; font-weight:500}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+
+.wrap{display:grid; grid-template-rows:auto 1fr; height:100vh}
+.topbar{display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--bg); z-index:5}
+.topbar h1{font-size:15px; font-weight:600; margin:0; letter-spacing:-.015em}
+.topbar .meta{color:var(--faint)}
+.spacer{flex:1}
+.btn{display:flex; align-items:center; gap:7px; padding:5px 12px; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:12.5px; transition:border-color .16s var(--ease), color .16s var(--ease)}
+.btn:hover{border-color:var(--border-strong); color:var(--ink)}
+.iconbtn{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--muted);transition:background .15s var(--ease)}
+.iconbtn:hover{background:var(--surface-2); color:var(--ink)}
+.iconbtn svg{width:15px;height:15px;stroke-width:1.7;fill:none;stroke:currentColor}
+
+.stage{position:relative; overflow:hidden}
+canvas{display:block; width:100%; height:100%; cursor:grab; touch-action:none}
+canvas.grabbing{cursor:grabbing}
+
+/* legend */
+.legend{position:absolute; left:18px; top:16px; display:flex; flex-direction:column; gap:7px; padding:12px 14px; background:color-mix(in srgb,var(--surface) 82%,transparent); backdrop-filter:blur(12px); border:1px solid var(--border); border-radius:14px}
+.legend .lrow{display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--muted); cursor:pointer; user-select:none}
+.legend .lrow.off{opacity:.35}
+.legend .sw{width:9px;height:9px;border-radius:50%; flex:none}
+.legend .n{margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--faint)}
+
+/* detail */
+.detail{position:absolute; right:18px; top:16px; width:298px; padding:18px; background:color-mix(in srgb,var(--surface) 88%,transparent); backdrop-filter:blur(14px); border:1px solid var(--border); border-radius:16px; opacity:0; transform:translateY(-6px); pointer-events:none; transition:all .3s var(--ease)}
+.detail.show{opacity:1; transform:none; pointer-events:auto}
+.detail .kind{color:var(--faint); display:block}
+.detail h3{margin:9px 0 0; font-size:18px; font-weight:600; letter-spacing:-.02em}
+.detail p{margin:9px 0 0; color:var(--muted); font-size:13px; line-height:1.55}
+.detail .rel{margin-top:15px; padding-top:13px; border-top:1px solid var(--border)}
+.detail .rel .lab{color:var(--faint); display:block; margin-bottom:9px}
+.detail .rel .items{display:flex; flex-wrap:wrap; gap:5px}
+.detail .rel button{display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border:1px solid var(--border); border-radius:999px; font-size:11.5px; color:var(--muted); transition:border-color .15s var(--ease), color .15s var(--ease)}
+.detail .rel button:hover{border-color:var(--border-strong); color:var(--ink)}
+.detail .rel .sw{width:5px;height:5px;border-radius:50%;flex:none}
+.detail .close{position:absolute; top:12px; right:12px}
+
+/* tuning panel */
+.tune{position:absolute; left:18px; bottom:18px; width:240px; padding:14px 15px; background:color-mix(in srgb,var(--surface) 84%,transparent); backdrop-filter:blur(12px); border:1px solid var(--border); border-radius:14px; transition:transform .3s var(--ease), opacity .3s var(--ease)}
+.tune.hide{transform:translateY(calc(100% + 26px)); opacity:0; pointer-events:none}
+.tune .th{display:flex; align-items:center; color:var(--faint); margin-bottom:12px}
+.tune .th .x{margin-left:auto; cursor:pointer}
+.tune label{display:block; margin-bottom:11px}
+.tune .lr{display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); margin-bottom:5px}
+.tune .lr b{font-family:'JetBrains Mono',monospace; font-weight:400; color:var(--faint); font-size:10.5px}
+.tune input[type=range]{width:100%; height:3px; -webkit-appearance:none; appearance:none; background:var(--border-strong); border-radius:2px; outline:none}
+.tune input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:13px;height:13px;border-radius:50%;background:var(--accent); cursor:pointer; border:2px solid var(--surface)}
+.tune input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--surface)}
+
+.hint{position:absolute; right:18px; bottom:18px; color:var(--faint); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.07em; text-align:right; line-height:1.8; pointer-events:none}
+
+@media (max-width:820px){
+  .detail{left:14px; right:14px; top:auto; bottom:14px; width:auto}
+  .tune{display:none}
+  .legend{left:12px; top:12px; padding:9px 11px; gap:5px}
+  .legend .lrow{font-size:11.5px}
+  .hint{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <h1>Idea Graph</h1>
+    <span class="meta mono">17 nodes · 21 links · live simulation</span>
+    <div class="spacer"></div>
+    <button class="btn" id="reheat">Reshuffle</button>
+    <button class="btn" id="fit">Fit</button>
+    <button class="iconbtn" id="toggletune" title="Physics"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
+    <button class="iconbtn" id="theme" title="Theme"><svg id="ticon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  </header>
+
+  <div class="stage">
+    <canvas id="c"></canvas>
+
+    <div class="legend" id="legend"></div>
+
+    <div class="detail" id="detail">
+      <button class="iconbtn close" id="dclose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <span class="kind mono" id="dkind">Project</span>
+      <h3 id="dname">Fixate</h3>
+      <p id="dnote"></p>
+      <div class="rel"><span class="lab mono">Linked</span><div class="items" id="drel"></div></div>
+    </div>
+
+    <div class="tune hide" id="tune">
+      <div class="th mono">Physics <span class="x" id="tclose">✕</span></div>
+      <label><span class="lr">Repulsion <b id="v-rep"></b></span><input type="range" id="s-rep" min="200" max="4000" step="50"></label>
+      <label><span class="lr">Link distance <b id="v-len"></b></span><input type="range" id="s-len" min="40" max="220" step="2"></label>
+      <label><span class="lr">Link strength <b id="v-str"></b></span><input type="range" id="s-str" min="1" max="60" step="1"></label>
+      <label><span class="lr">Gravity <b id="v-grv"></b></span><input type="range" id="s-grv" min="0" max="40" step="1"></label>
+      <label style="margin-bottom:0"><span class="lr">Label size <b id="v-lbl"></b></span><input type="range" id="s-lbl" min="9" max="16" step="1"></label>
+    </div>
+
+    <div class="hint">
+      drag node · pin<br>
+      drag empty · pan<br>
+      scroll · zoom<br>
+      click node · focus
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DATA — the real mockGraph() from src/App.tsx:631
+   ============================================================ */
+const KINDS = {
+  Project:  {c:"--k-project",  label:"Projects"},
+  Research: {c:"--k-research", label:"Research"},
+  Concept:  {c:"--k-concept",  label:"Concepts"},
+  Hobbies:  {c:"--k-hobby",    label:"Hobbies"},
+};
+
+const NODES = [
+  {id:"fixate",      label:"Fixate",                   kind:"Project",  note:"Local-CV Chrome extension that verifies real focus time."},
+  {id:"whoomp",      label:"whoomp",                   kind:"Project",  note:"Local-first health app: reads biometrics over BLE, computes recovery on-device."},
+  {id:"kodo",        label:"kōdō",                     kind:"Project",  note:"Productivity dashboard driven by local SLMs."},
+  {id:"cryptoradar", label:"CryptoRadar",              kind:"Project",  note:"Crypto regulatory + market intelligence terminal."},
+  {id:"options",     label:"Options Chain Analytics",  kind:"Project",  note:"Analytics for historical options chain data."},
+  {id:"tradingbot",  label:"XRP Trading Bot",          kind:"Project",  note:"Algorithmic trading bot pairing signals with a local SLM."},
+  {id:"mochi",       label:"Mochi desk robot",         kind:"Project",  note:"ESP32 desk companion running a small language model."},
+  {id:"cubesat",     label:"CubeSat (Ukpik-1)",        kind:"Project",  note:"Radio ground station for the Ukpik-1 CubeSat."},
+  {id:"galaxy",      label:"Galactic Mapping ML",      kind:"Research", note:"ML classification for galactic components (JWST)."},
+  {id:"spectral",    label:"Spectral Emission Study",  kind:"Research", note:"PAH spectroscopy of NGC 2023 (Spitzer)."},
+  {id:"birds",       label:"Bird Species Classification", kind:"Research", note:"Bioacoustics CNN for bird species ID."},
+  {id:"ml",          label:"AI / SLMs",                kind:"Concept",  note:"Machine learning and small on-device language models."},
+  {id:"finance",     label:"Finance",                  kind:"Concept",  note:"Options, risk, crypto, analytics."},
+  {id:"astro",       label:"Astronomy",                kind:"Concept",  note:"Galaxies, nebulae, mapping."},
+  {id:"engineering", label:"Engineering",              kind:"Concept",  note:"Embedded, satellites, radio, hardware."},
+  {id:"trading",     label:"Trading",                  kind:"Hobbies",  note:"Algorithmic and discretionary trading strategies."},
+  {id:"astrophotography", label:"Astrophotography",    kind:"Hobbies",  note:"Capturing celestial objects with long exposures."},
+];
+
+const LINKS = [
+  ["fixate","ml"],["whoomp","engineering"],["whoomp","ml"],["kodo","ml"],
+  ["cryptoradar","finance"],["mochi","engineering"],["mochi","ml"],
+  ["options","finance"],["options","ml"],["galaxy","ml"],["galaxy","astro"],
+  ["birds","ml"],["spectral","astro"],["spectral","ml"],
+  ["cubesat","engineering"],["cubesat","astro"],
+  ["tradingbot","finance"],["tradingbot","ml"],
+  ["trading","finance"],["trading","ml"],["astrophotography","astro"],
+].map(([source,target]) => ({source,target}));
+
+/* ============================================================
+   SETUP
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const canvas = $("#c"), ctx = canvas.getContext("2d");
+const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const byId = Object.fromEntries(NODES.map(n => [n.id, n]));
+const degree = {}; NODES.forEach(n => degree[n.id] = 0);
+LINKS.forEach(l => { degree[l.source]++; degree[l.target]++; });
+const neighbors = {}; NODES.forEach(n => neighbors[n.id] = new Set());
+LINKS.forEach(l => { neighbors[l.source].add(l.target); neighbors[l.target].add(l.source); });
+
+// physics params (tunable)
+const P = { rep: 1600, len: 108, str: 22, grv: 12, lbl: 12 };
+
+let W = 0, H = 0, dpr = Math.min(devicePixelRatio || 1, 2);
+let view = { x: 0, y: 0, k: 1 };
+let alpha = 1;
+let hovered = null, selected = null, dragging = null, panning = false;
+const hiddenKinds = new Set();
+
+// seed positions in a ring by kind so it settles predictably
+function seed(){
+  const order = ["Concept","Project","Research","Hobbies"];
+  NODES.forEach((n, i) => {
+    const ring = order.indexOf(n.kind);
+    const a = (i / NODES.length) * Math.PI * 2 + ring * 0.7;
+    const r = 60 + ring * 55;
+    n.x = Math.cos(a) * r + (Math.random() - .5) * 24;
+    n.y = Math.sin(a) * r + (Math.random() - .5) * 24;
+    n.vx = 0; n.vy = 0; n.pinned = false;
+    n.r = 5.5 + Math.min(degree[n.id], 8) * 1.5;
+  });
+}
+seed();
+
+function resize(){
+  const st = canvas.parentElement.getBoundingClientRect();
+  W = st.width; H = st.height;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + "px"; canvas.style.height = H + "px";
+}
+
+/* ============================================================
+   SIMULATION — repulsion + springs + centering gravity
+   ============================================================ */
+function tick(){
+  const a = alpha;
+
+  // pairwise repulsion
+  for(let i = 0; i < NODES.length; i++){
+    const n1 = NODES[i];
+    for(let j = i + 1; j < NODES.length; j++){
+      const n2 = NODES[j];
+      let dx = n2.x - n1.x, dy = n2.y - n1.y;
+      let d2 = dx*dx + dy*dy;
+      if(d2 < 1) { d2 = 1; dx = (Math.random()-.5); dy = (Math.random()-.5); }
+      const d = Math.sqrt(d2);
+      const f = (P.rep * a) / d2;
+      const fx = (dx / d) * f, fy = (dy / d) * f;
+      n1.vx -= fx; n1.vy -= fy;
+      n2.vx += fx; n2.vy += fy;
+    }
+  }
+
+  // link springs
+  for(const l of LINKS){
+    const s = byId[l.source], t = byId[l.target];
+    const dx = t.x - s.x, dy = t.y - s.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const f = ((d - P.len) * (P.str / 1000) * a);
+    const fx = (dx / d) * f, fy = (dy / d) * f;
+    s.vx += fx; s.vy += fy;
+    t.vx -= fx; t.vy -= fy;
+  }
+
+  // centering gravity
+  for(const n of NODES){
+    n.vx -= n.x * (P.grv / 10000) * a;
+    n.vy -= n.y * (P.grv / 10000) * a;
+  }
+
+  // integrate
+  for(const n of NODES){
+    if(n.pinned) { n.vx = 0; n.vy = 0; continue; }
+    n.vx *= 0.82; n.vy *= 0.82;
+    const sp = Math.hypot(n.vx, n.vy);
+    if(sp > 18){ n.vx = n.vx / sp * 18; n.vy = n.vy / sp * 18; }
+    n.x += n.vx; n.y += n.vy;
+  }
+
+  alpha *= 0.985;
+  if(alpha < 0.004) alpha = 0.004; // idle floor — keeps it alive but still
+}
+
+function reheat(v = 1){ alpha = v; }
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function visible(n){ return !hiddenKinds.has(n.kind); }
+
+function activeSet(){
+  const focus = selected || hovered;
+  if(!focus) return null;
+  const s = new Set(neighbors[focus.id]); s.add(focus.id);
+  return s;
+}
+
+function draw(){
+  const bg = css("--canvas-bg");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.translate(W/2 + view.x, H/2 + view.y);
+  ctx.scale(view.k, view.k);
+
+  const act = activeSet();
+  const linkCol = css("--link"), linkHot = css("--link-hot");
+
+  // links
+  ctx.lineCap = "round";
+  for(const l of LINKS){
+    const s = byId[l.source], t = byId[l.target];
+    if(!visible(s) || !visible(t)) continue;
+    const hot = act && act.has(s.id) && act.has(t.id);
+    ctx.globalAlpha = act ? (hot ? 1 : 0.13) : 0.75;
+    ctx.strokeStyle = hot ? linkHot : linkCol;
+    ctx.lineWidth = hot ? 1.7 : 1.1;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(t.x, t.y); ctx.stroke();
+  }
+
+  // nodes
+  const labelCol = css("--node-label"), surf = css("--surface");
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for(const n of NODES){
+    if(!visible(n)) continue;
+    const on = !act || act.has(n.id);
+    const isFocus = (selected && selected.id === n.id) || (hovered && hovered.id === n.id);
+    const col = css(KINDS[n.kind].c);
+
+    ctx.globalAlpha = on ? 1 : 0.16;
+
+    // halo on focus
+    if(isFocus){
+      ctx.globalAlpha = on ? 0.18 : 0.1;
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 9, 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = on ? 1 : 0.16;
+    }
+
+    ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 6.2832);
+    ctx.fillStyle = col; ctx.fill();
+    ctx.lineWidth = 2 / view.k; ctx.strokeStyle = surf; ctx.stroke();
+
+    // label
+    ctx.globalAlpha = on ? 1 : 0.13;
+    ctx.fillStyle = labelCol;
+    ctx.font = `${isFocus ? 600 : 500} ${P.lbl}px Inter, system-ui, sans-serif`;
+    ctx.fillText(n.label, n.x, n.y + n.r + 6);
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function frame(){
+  if(!REDUCE) tick();
+  draw();
+  requestAnimationFrame(frame);
+}
+
+/* ============================================================
+   INTERACTION
+   ============================================================ */
+function toWorld(px, py){
+  const r = canvas.getBoundingClientRect();
+  return {
+    x: ((px - r.left) - W/2 - view.x) / view.k,
+    y: ((py - r.top)  - H/2 - view.y) / view.k,
+  };
+}
+function pick(px, py){
+  const p = toWorld(px, py);
+  let best = null, bd = Infinity;
+  for(const n of NODES){
+    if(!visible(n)) continue;
+    const d = Math.hypot(n.x - p.x, n.y - p.y);
+    if(d < n.r + 12 && d < bd){ bd = d; best = n; }
+  }
+  return best;
+}
+
+let down = null, moved = false;
+canvas.addEventListener("pointerdown", e => {
+  canvas.setPointerCapture(e.pointerId);
+  moved = false;
+  const hit = pick(e.clientX, e.clientY);
+  if(hit){ dragging = hit; hit.pinned = true; reheat(0.5); }
+  else { panning = true; canvas.classList.add("grabbing"); }
+  down = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y };
+});
+canvas.addEventListener("pointermove", e => {
+  if(down && (Math.abs(e.clientX - down.x) > 3 || Math.abs(e.clientY - down.y) > 3)) moved = true;
+  if(dragging){
+    const p = toWorld(e.clientX, e.clientY);
+    dragging.x = p.x; dragging.y = p.y; dragging.vx = 0; dragging.vy = 0;
+    reheat(0.45);
+  } else if(panning && down){
+    view.x = down.vx + (e.clientX - down.x);
+    view.y = down.vy + (e.clientY - down.y);
+  } else {
+    const h = pick(e.clientX, e.clientY);
+    if(h !== hovered){ hovered = h; canvas.style.cursor = h ? "pointer" : "grab"; }
+  }
+});
+function endPointer(e){
+  if(dragging){ dragging.pinned = false; dragging = null; }
+  if(panning){ panning = false; canvas.classList.remove("grabbing"); }
+  if(!moved){
+    const hit = pick(e.clientX, e.clientY);
+    select(hit);
+  }
+  down = null;
+}
+canvas.addEventListener("pointerup", endPointer);
+canvas.addEventListener("pointercancel", () => { if(dragging){dragging.pinned=false;dragging=null;} panning=false; down=null; canvas.classList.remove("grabbing"); });
+
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left - W/2, my = e.clientY - r.top - H/2;
+  const k0 = view.k;
+  view.k = Math.min(3, Math.max(0.35, view.k * (e.deltaY < 0 ? 1.12 : 1/1.12)));
+  view.x = mx - (mx - view.x) * (view.k / k0);
+  view.y = my - (my - view.y) * (view.k / k0);
+}, { passive: false });
+
+/* ---------- selection detail ---------- */
+function select(n){
+  selected = n;
+  const d = $("#detail");
+  if(!n){ d.classList.remove("show"); return; }
+  $("#dkind").textContent = n.kind;
+  $("#dname").textContent = n.label;
+  $("#dnote").textContent = n.note;
+  const rel = [...neighbors[n.id]].map(id => byId[id]);
+  $("#drel").innerHTML = rel.map(r =>
+    `<button data-id="${r.id}"><span class="sw" style="background:${css(KINDS[r.kind].c)}"></span>${r.label}</button>`).join("");
+  d.classList.add("show");
+}
+$("#dclose").onclick = () => select(null);
+$("#drel").onclick = e => { const b = e.target.closest("[data-id]"); if(b) select(byId[b.dataset.id]); };
+
+/* ---------- legend ---------- */
+function renderLegend(){
+  $("#legend").innerHTML = Object.entries(KINDS).map(([k, v]) => {
+    const n = NODES.filter(x => x.kind === k).length;
+    return `<div class="lrow${hiddenKinds.has(k) ? " off" : ""}" data-k="${k}">
+      <span class="sw" style="background:var(${v.c})"></span>${v.label}<span class="n">${n}</span></div>`;
+  }).join("");
+}
+renderLegend();
+$("#legend").onclick = e => {
+  const r = e.target.closest("[data-k]"); if(!r) return;
+  const k = r.dataset.k;
+  hiddenKinds.has(k) ? hiddenKinds.delete(k) : hiddenKinds.add(k);
+  if(selected && hiddenKinds.has(selected.kind)) select(null);
+  renderLegend(); reheat(.4);
+};
+
+/* ---------- controls ---------- */
+$("#reheat").onclick = () => { seed(); select(null); reheat(1); };
+$("#fit").onclick = () => {
+  const vis = NODES.filter(visible);
+  if(!vis.length) return;
+  const xs = vis.map(n=>n.x), ys = vis.map(n=>n.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  const pad = 90;
+  const k = Math.min((W - pad*2) / Math.max(maxX-minX, 1), (H - pad*2) / Math.max(maxY-minY, 1));
+  view.k = Math.min(2, Math.max(0.35, k));
+  view.x = -((minX+maxX)/2) * view.k;
+  view.y = -((minY+maxY)/2) * view.k;
+};
+
+const SUN='<path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.7-5.7 1.4-1.4M4.9 19.1l1.4-1.4m11.4 0 1.4 1.4M4.9 4.9l1.4 1.4"/><circle cx="12" cy="12" r="4"/>';
+const MOON='<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+$("#theme").onclick = () => {
+  const dark = document.documentElement.dataset.theme === "dark";
+  document.documentElement.dataset.theme = dark ? "light" : "dark";
+  $("#ticon").innerHTML = dark ? MOON : SUN;
+  renderLegend();
+  if(selected) select(selected);
+};
+
+/* ---------- tuning panel ---------- */
+$("#toggletune").onclick = () => $("#tune").classList.toggle("hide");
+$("#tclose").onclick = () => $("#tune").classList.add("hide");
+[["rep","s-rep","v-rep"],["len","s-len","v-len"],["str","s-str","v-str"],["grv","s-grv","v-grv"],["lbl","s-lbl","v-lbl"]]
+.forEach(([key, sid, vid]) => {
+  const s = $("#"+sid);
+  s.value = P[key];
+  $("#"+vid).textContent = P[key];
+  s.oninput = () => { P[key] = +s.value; $("#"+vid).textContent = s.value; if(key!=="lbl") reheat(.6); };
+});
+
+addEventListener("keydown", e => { if(e.key === "Escape") select(null); });
+addEventListener("resize", () => { resize(); reheat(.3); });
+
+resize();
+if(REDUCE){ for(let i = 0; i < 400; i++) tick(); }  // pre-settle, then render statically
+frame();
+setTimeout(() => $("#fit").click(), REDUCE ? 0 : 1600);
+</script>
+</body>
+</html>

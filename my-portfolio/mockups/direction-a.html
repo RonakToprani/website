@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direction A — Warm Editorial · ronak.to mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DIRECTION A — WARM EDITORIAL
+   Fraunces (display) / Inter (body) / JetBrains Mono (labels)
+   ============================================================ */
+:root{
+  --bg:#FBFAF7; --bg-tint:#F5F2EA; --surface:#FFFFFF; --surface-2:#F8F6F0;
+  --ink:#1A1815; --muted:#6E6A62; --faint:#9A958A;
+  --border:#E8E4DB; --border-strong:#D8D2C6;
+  --accent:#9A6B2F; --accent-soft:#F3EADC; --accent-ink:#7A5423;
+  --star:#1A1815; --star-a:0.16;
+  --shadow-sm:0 1px 2px rgba(26,24,21,.05);
+  --shadow-md:0 4px 16px -4px rgba(26,24,21,.10), 0 1px 3px rgba(26,24,21,.06);
+  --shadow-lg:0 24px 60px -12px rgba(26,24,21,.22), 0 2px 8px rgba(26,24,21,.08);
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-xl:26px;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --sidebar:266px;
+}
+[data-theme="dark"]{
+  --bg:#121110; --bg-tint:#171614; --surface:#1A1917; --surface-2:#211F1C;
+  --ink:#EDEAE3; --muted:#A8A296; --faint:#787166;
+  --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.16);
+  --accent:#D6A45C; --accent-soft:rgba(214,164,92,.13); --accent-ink:#E6BC80;
+  --star:#F0E6D2; --star-a:0.85;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --shadow-md:0 4px 16px -4px rgba(0,0,0,.5);
+  --shadow-lg:0 24px 60px -12px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.06);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:Inter,ui-sans-serif,system-ui,sans-serif;
+  font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s var(--ease), color .4s var(--ease);
+}
+h1,h2,h3,h4{margin:0; font-family:Fraunces,Georgia,serif; font-weight:500; letter-spacing:-.015em; line-height:1.15}
+p{margin:0}
+button{font:inherit; color:inherit; background:none; border:none; cursor:pointer}
+a{color:inherit}
+::selection{background:var(--accent-soft); color:var(--accent-ink)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:4px}
+
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; font-weight:500}
+
+/* ---------- ambient backdrop ---------- */
+#stars{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0; transition:opacity 1.2s var(--ease)}
+body.ambient #stars{opacity:1}
+
+/* ---------- layout ---------- */
+.app{position:relative; z-index:1; display:grid; grid-template-columns:var(--sidebar) 1fr; min-height:100vh}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  border-right:1px solid var(--border); padding:26px 18px 32px;
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+  background:color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter:blur(14px) saturate(1.3);
+  display:flex; flex-direction:column; gap:26px;
+}
+.brand{display:flex; align-items:baseline; gap:9px; padding:0 10px}
+.brand .dot{width:7px;height:7px;border-radius:50%;background:var(--accent); flex:none; transform:translateY(-2px)}
+.brand .name{font-family:Fraunces; font-size:18px; letter-spacing:-.02em}
+.brand .loc{margin-left:auto; color:var(--faint)}
+
+.navgroup{display:flex; flex-direction:column; gap:2px}
+.navlabel{padding:0 10px 8px; color:var(--faint)}
+.navitem{
+  display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+  padding:8px 10px; border-radius:var(--r-sm); color:var(--muted);
+  transition:background .18s var(--ease), color .18s var(--ease);
+  position:relative;
+}
+.navitem svg{width:16px;height:16px;flex:none;stroke-width:1.6}
+.navitem:hover{background:var(--surface-2); color:var(--ink)}
+.navitem.on{color:var(--ink); background:var(--surface-2); font-weight:500}
+.navitem.on::before{content:""; position:absolute; left:-18px; top:50%; transform:translateY(-50%); width:2px; height:17px; background:var(--accent); border-radius:0 2px 2px 0}
+.navitem .count{margin-left:auto; color:var(--faint); font-family:'JetBrains Mono',monospace; font-size:11px}
+
+.recent{display:flex; flex-direction:column; gap:1px}
+.recent button{display:flex; gap:9px; align-items:center; padding:6px 10px; border-radius:var(--r-sm); color:var(--muted); font-size:13.5px; width:100%; text-align:left; transition:background .18s var(--ease)}
+.recent button:hover{background:var(--surface-2); color:var(--ink)}
+.recent .kd{width:5px;height:5px;border-radius:50%;flex:none}
+.kd.project{background:var(--accent)} .kd.astro{background:#6B7FB8} .kd.note{background:#8A8577}
+
+.sidefoot{margin-top:auto; padding:0 10px; color:var(--faint); font-size:12px; line-height:1.7}
+.sidefoot kbd{font-family:'JetBrains Mono',monospace; font-size:10px; border:1px solid var(--border-strong); border-radius:4px; padding:1px 4px; color:var(--muted)}
+
+/* ---------- header ---------- */
+.topbar{
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; gap:14px; padding:14px 40px;
+  border-bottom:1px solid var(--border);
+  background:color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter:blur(14px) saturate(1.3);
+}
+.crumb{display:flex; align-items:center; gap:8px; color:var(--faint)}
+.crumb .cur{color:var(--ink)}
+.spacer{flex:1}
+.searchbtn{
+  display:flex; align-items:center; gap:9px; padding:6px 10px 6px 12px;
+  border:1px solid var(--border); border-radius:999px; color:var(--muted);
+  font-size:13px; background:var(--surface); transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+.searchbtn:hover{border-color:var(--border-strong); box-shadow:var(--shadow-sm)}
+.searchbtn kbd{font-family:'JetBrains Mono',monospace; font-size:10px; border:1px solid var(--border); border-radius:4px; padding:1px 5px; color:var(--faint)}
+.iconbtn{width:32px;height:32px;border-radius:var(--r-sm); display:grid;place-items:center; color:var(--muted); transition:background .18s var(--ease), color .18s var(--ease)}
+.iconbtn:hover{background:var(--surface-2); color:var(--ink)}
+.iconbtn svg{width:16px;height:16px;stroke-width:1.6}
+.iconbtn.on{color:var(--accent); background:var(--accent-soft)}
+
+/* mockup-only control strip */
+.labstrip{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:9px 40px; border-bottom:1px dashed var(--border);
+  background:var(--bg-tint); color:var(--faint); font-size:11.5px;
+  font-family:'JetBrains Mono',monospace; letter-spacing:.04em;
+}
+.labstrip .seg{display:flex; border:1px solid var(--border-strong); border-radius:999px; overflow:hidden}
+.labstrip .seg button{padding:3px 11px; font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+.labstrip .seg button.on{background:var(--ink); color:var(--bg)}
+
+/* ---------- page ---------- */
+.page{padding:44px 40px 100px; max-width:900px}
+.pagehead{margin-bottom:34px}
+.pagehead .eyebrow{color:var(--faint); margin-bottom:12px; display:block}
+.pagehead h1{font-size:38px; letter-spacing:-.025em; font-weight:400}
+.pagehead .sub{color:var(--muted); margin-top:9px; font-size:15.5px; max-width:56ch}
+
+.rise{opacity:0; transform:translateY(14px); animation:rise .5s var(--ease) forwards}
+@keyframes rise{to{opacity:1; transform:none}}
+
+/* ---------- home ---------- */
+.lede{font-size:18px; line-height:1.68; color:var(--muted); max-width:60ch; margin-top:18px}
+.lede strong{color:var(--ink); font-weight:500}
+.hero-h{font-size:clamp(34px,5.2vw,54px); font-weight:300; letter-spacing:-.03em; line-height:1.06}
+.hero-h em{font-style:italic; color:var(--accent)}
+.hairline{height:1px; background:var(--border); margin:38px 0}
+.blocks{display:grid; grid-template-columns:repeat(auto-fit,minmax(212px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden}
+.block{background:var(--surface); padding:20px 19px; transition:background .2s var(--ease)}
+.block:hover{background:var(--surface-2)}
+.block .k{color:var(--faint); margin-bottom:11px; display:block}
+.block .v{font-size:14px; line-height:1.6; color:var(--muted)}
+.block .v b{color:var(--ink); font-weight:500}
+
+/* ---------- work list ---------- */
+.chips{display:flex; gap:7px; flex-wrap:wrap; margin-bottom:8px}
+.chip{padding:5px 13px; border:1px solid var(--border); border-radius:999px; font-size:12.5px; color:var(--muted); transition:all .18s var(--ease)}
+.chip:hover{border-color:var(--border-strong); color:var(--ink)}
+.chip.on{background:var(--ink); border-color:var(--ink); color:var(--bg)}
+
+.rows{margin-top:6px; border-top:1px solid var(--border)}
+.row{
+  display:grid; grid-template-columns:38px 1fr; gap:18px; width:100%; text-align:left;
+  padding:22px 14px 22px 10px; margin:0 -14px 0 -10px;
+  border-bottom:1px solid var(--border);
+  border-radius:var(--r-md);
+  transition:background .22s var(--ease);
+  position:relative;
+}
+.row:hover{background:var(--surface)}
+.row .idx{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--faint); padding-top:6px; letter-spacing:.06em}
+.row:hover .idx{color:var(--accent)}
+.row .venue{color:var(--faint); display:block; margin-bottom:7px}
+.row h3{font-size:21px; font-weight:400; letter-spacing:-.02em; display:flex; align-items:center; gap:10px}
+.row h3 .arw{opacity:0; transform:translateX(-5px); transition:all .22s var(--ease); color:var(--accent); font-size:15px}
+.row:hover h3 .arw{opacity:1; transform:none}
+.row p{color:var(--muted); font-size:14.2px; line-height:1.62; margin-top:8px; max-width:64ch}
+.tags{display:flex; gap:6px; flex-wrap:wrap; margin-top:13px}
+.tag{font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); border:1px solid var(--border); padding:3px 8px; border-radius:5px}
+
+/* ---------- notes / astro ---------- */
+.noteitem{display:block; width:100%; text-align:left; padding:22px 14px; margin:0 -14px; border-radius:var(--r-md); border-bottom:1px solid var(--border); transition:background .22s var(--ease)}
+.noteitem:hover{background:var(--surface)}
+.noteitem h3{font-size:23px; font-weight:400; font-style:italic}
+.astrogrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:22px; margin-top:26px}
+.astro{text-align:left; width:100%}
+.astro .frame{position:relative; aspect-ratio:1; border-radius:var(--r-lg); overflow:hidden; background:var(--bg-tint); border:1px solid var(--border)}
+.astro img{width:100%;height:100%;object-fit:cover; display:block; transition:transform .7s var(--ease), filter .4s var(--ease)}
+.astro:hover img{transform:scale(1.045)}
+.astro .frame::after{content:""; position:absolute; inset:0; box-shadow:inset 0 0 40px rgba(0,0,0,.28); pointer-events:none}
+.astro .cap{margin-top:11px}
+.astro .cap h4{font-size:15.5px; font-weight:500; font-family:Inter; letter-spacing:-.01em}
+.astro .cap .gear{color:var(--faint); margin-top:5px; display:block}
+.astro .cap p{color:var(--muted); font-size:13px; line-height:1.55; margin-top:7px}
+
+/* ---------- overlays ---------- */
+.scrim{position:fixed; inset:0; z-index:60; background:rgba(20,18,15,.32); backdrop-filter:blur(3px); opacity:0; pointer-events:none; transition:opacity .32s var(--ease)}
+.scrim.show{opacity:1; pointer-events:auto}
+[data-theme="dark"] .scrim{background:rgba(0,0,0,.6)}
+
+.detail{position:fixed; z-index:70; background:var(--surface); box-shadow:var(--shadow-lg); overflow-y:auto; transition:transform .42s var(--ease), opacity .3s var(--ease)}
+/* peek */
+.detail.peek{top:0; right:0; height:100vh; width:min(560px,100vw); border-left:1px solid var(--border); transform:translateX(101%)}
+.detail.peek.show{transform:none}
+/* modal */
+.detail.modal{top:50%; left:50%; width:min(820px,92vw); max-height:86vh; border-radius:var(--r-xl); border:1px solid var(--border); transform:translate(-50%,-46%) scale(.97); opacity:0}
+.detail.modal.show{transform:translate(-50%,-50%) scale(1); opacity:1}
+
+.dhead{position:sticky; top:0; display:flex; align-items:flex-start; gap:16px; padding:26px 30px 18px; background:color-mix(in srgb,var(--surface) 88%,transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--border)}
+.dhead h2{font-size:27px; font-weight:400; letter-spacing:-.02em}
+.dhead .venue{color:var(--faint); margin-top:8px; display:block}
+.dbody{padding:26px 30px 42px}
+.dbody p{color:var(--muted); line-height:1.72; font-size:14.6px}
+.dgrid{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--r-md); overflow:hidden; margin-top:22px}
+.dcard{background:var(--surface); padding:17px}
+.dcard .t{font-size:13.5px; font-weight:600; margin-bottom:7px}
+.dcard .d{font-size:12.8px; color:var(--muted); line-height:1.58}
+.dlist{margin:22px 0 0; padding:0; list-style:none; border-top:1px solid var(--border)}
+.dlist li{padding:11px 0; border-bottom:1px solid var(--border); font-size:13.4px; color:var(--muted); display:flex; gap:12px}
+.dlist li b{color:var(--ink); font-weight:500; min-width:158px; flex:none}
+
+/* ---------- palette ---------- */
+.palette{position:fixed; z-index:80; top:14vh; left:50%; transform:translate(-50%,-12px) scale(.98); width:min(560px,92vw); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transition:all .28s var(--ease); overflow:hidden}
+.palette.show{opacity:1; pointer-events:auto; transform:translate(-50%,0) scale(1)}
+.palette .inp{display:flex; align-items:center; gap:11px; padding:15px 18px; border-bottom:1px solid var(--border)}
+.palette input{flex:1; border:none; background:none; font:inherit; font-size:15px; color:var(--ink); outline:none}
+.palette input::placeholder{color:var(--faint)}
+.plist{max-height:334px; overflow-y:auto; padding:7px}
+.pitem{display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:9px 12px; border-radius:var(--r-sm); transition:background .14s var(--ease)}
+.pitem:hover,.pitem.sel{background:var(--surface-2)}
+.pkind{font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.1em; text-transform:uppercase; padding:3px 7px; border-radius:4px; flex:none}
+.pk-page{background:var(--surface-2); color:var(--muted); border:1px solid var(--border)}
+.pk-project{background:var(--accent-soft); color:var(--accent-ink)}
+.pk-astro{background:rgba(107,127,184,.15); color:#556CA8}
+[data-theme="dark"] .pk-astro{color:#9FB2E0}
+.pitem .tt{font-size:14px}
+.pitem .ss{font-size:12px; color:var(--faint); margin-top:2px}
+.pfoot{display:flex; gap:14px; padding:9px 16px; border-top:1px solid var(--border); color:var(--faint); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.06em}
+
+/* ---------- responsive ---------- */
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:fixed; inset:0 auto 0 0; width:270px; transform:translateX(-101%); transition:transform .34s var(--ease); z-index:90; background:var(--bg)}
+  body.nav .sidebar{transform:none; box-shadow:var(--shadow-lg)}
+  .topbar,.labstrip{padding-left:18px; padding-right:18px}
+  .page{padding:30px 18px 90px}
+  .menubtn{display:grid !important}
+  .dgrid{grid-template-columns:1fr}
+  .detail.peek{width:100vw}
+}
+.menubtn{display:none}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important; transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body class="ambient">
+<canvas id="stars"></canvas>
+
+<div class="app">
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="dot"></span>
+      <span class="name">Ronak Toprani</span>
+    </div>
+
+    <nav class="navgroup">
+      <span class="navlabel mono">Workspace</span>
+      <button class="navitem on" data-page="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+        Home
+      </button>
+      <button class="navitem" data-page="work">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="2.5"/><ellipse cx="12" cy="12" rx="10" ry="4.5"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(120 12 12)"/></svg>
+        Projects + Research <span class="count">11</span>
+      </button>
+      <button class="navitem" data-page="notes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h9l7 7v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M13 4v7h7"/></svg>
+        Notes <span class="count">11</span>
+      </button>
+      <button class="navitem" data-page="graph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="8" r="2.4"/><circle cx="11" cy="18" r="2.4"/><path d="M8 7l8 .8M7.4 8.1 10 15.7M16.6 10l-4.2 6"/></svg>
+        Idea Graph
+      </button>
+      <button class="navitem" data-page="contact">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-4 4-6 7.5-6s6.3 2 7.5 6"/></svg>
+        Contact
+      </button>
+    </nav>
+
+    <div class="navgroup">
+      <span class="navlabel mono">Recent</span>
+      <div class="recent">
+        <button><span class="kd project"></span>Fixate</button>
+        <button><span class="kd astro"></span>M101 (Pinwheel Galaxy)</button>
+        <button><span class="kd note"></span>aims without attachment</button>
+        <button><span class="kd project"></span>whoomp</button>
+      </div>
+    </div>
+
+    <div class="sidefoot">
+      Press <kbd>⌘K</kbd> or <kbd>/</kbd><br>to search everything.
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div>
+    <header class="topbar">
+      <button class="iconbtn menubtn" id="menu" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="crumb mono"><span>ronak.to</span><span>/</span><span class="cur" id="crumb">home</span></div>
+      <div class="spacer"></div>
+      <button class="searchbtn" id="opensearch">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        Search <kbd>⌘K</kbd>
+      </button>
+      <button class="iconbtn" id="theme" aria-label="Toggle theme">
+        <svg id="ticon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </header>
+
+    <!-- mockup-only controls -->
+    <div class="labstrip">
+      <span>MOCKUP CONTROLS</span>
+      <span class="seg">
+        <button class="on" id="amb-on">Backdrop on</button><button id="amb-off">off</button>
+      </span>
+      <span class="seg">
+        <button class="on" id="d-peek">Peek panel</button><button id="d-modal">Modal</button>
+      </span>
+      <span style="opacity:.7">— click any project row to compare</span>
+    </div>
+
+    <!-- ============ HOME ============ -->
+    <main class="page" id="p-home">
+      <div class="rise" style="animation-delay:.02s">
+        <span class="mono" style="color:var(--faint)">Toronto · Est. 2025</span>
+        <h1 class="hero-h" style="margin-top:18px">Builds, research,<br>and a <em>lot</em> of sky.</h1>
+        <p class="lede">I'm <strong>Ronak Toprani</strong> — I work on tech in finance by day and build products the rest of the time. Lately that means <strong>local-first tools</strong> and <strong>small on-device AI</strong>: focus software, wearables, and desk robots. I also love physics, astrophotography, and philosophy. This is where it all lives.</p>
+      </div>
+
+      <div class="hairline rise" style="animation-delay:.08s"></div>
+
+      <div class="blocks rise" style="animation-delay:.12s">
+        <div class="block"><span class="k mono">Latest build</span><div class="v"><b>Fixate</b> — a Chrome extension that <i>verifies</i> focus with local, on-device gaze detection. No backend, no data leaves the machine.</div></div>
+        <div class="block"><span class="k mono">Also shipping</span><div class="v"><b>whoomp</b> (local-first health app reading biometrics on-device) and <b>kōdō</b> (a dashboard run by local SLMs).</div></div>
+        <div class="block"><span class="k mono">Recent note</span><div class="v">New astrophotography — the C27 Crescent Nebula, M27 Dumbbell, and more, over in Notes.</div></div>
+      </div>
+
+      <div class="hairline rise" style="animation-delay:.16s"></div>
+
+      <div class="rise" style="animation-delay:.2s">
+        <span class="mono" style="color:var(--faint)">Currently</span>
+        <ul class="dlist" style="margin-top:14px">
+          <li><b>Building</b> Fixate — on-device gaze verification, MV3</li>
+          <li><b>Reading</b> Tao Te Ching, again</li>
+          <li><b>Imaging</b> M101 from a Bortle 8 backyard, which is optimistic</li>
+        </ul>
+      </div>
+    </main>
+
+    <!-- ============ WORK ============ -->
+    <main class="page" id="p-work" hidden>
+      <div class="pagehead rise">
+        <span class="eyebrow mono">11 entries</span>
+        <h1>Projects + Research</h1>
+        <p class="sub">Selected research, builds, and experiments. Local-first tools, small on-device models, finance, and astronomy.</p>
+      </div>
+      <div class="chips rise" style="animation-delay:.05s" id="chips"></div>
+      <div class="rows" id="rows"></div>
+    </main>
+
+    <!-- ============ NOTES ============ -->
+    <main class="page" id="p-notes" hidden>
+      <div class="pagehead rise">
+        <span class="eyebrow mono">Writing &amp; sky</span>
+        <h1>Notes</h1>
+        <p class="sub">Short notes, and a growing astrophotography log.</p>
+      </div>
+      <div class="rise" style="animation-delay:.05s; border-top:1px solid var(--border)">
+        <button class="noteitem">
+          <span class="mono" style="color:var(--faint)">Philosophy · Aug 2025</span>
+          <h3 style="margin-top:8px">aims without attachment</h3>
+          <p style="color:var(--muted); font-size:14.2px; margin-top:8px; max-width:62ch">a personal take on Taoism — dropping the enforcement, and aiming high while letting go of the outcome.</p>
+        </button>
+      </div>
+
+      <div style="margin-top:46px">
+        <h2 style="font-size:25px; font-weight:400">Astrophotography</h2>
+        <p style="color:var(--muted); font-size:14.2px; margin-top:9px; max-width:62ch">These photos are either taken with a Seestar S50 telescope or a canon mirrorless camera. In both cases, images are taken with long exposures and stacked.</p>
+        <div class="astrogrid" id="astro"></div>
+      </div>
+    </main>
+
+    <!-- ============ GRAPH ============ -->
+    <main class="page" id="p-graph" hidden>
+      <div class="pagehead rise">
+        <span class="eyebrow mono">17 nodes · 21 links</span>
+        <h1>Idea Graph</h1>
+        <p class="sub">A map linking projects, papers, and concepts.</p>
+      </div>
+      <div style="border:1px solid var(--border); border-radius:var(--r-xl); padding:52px 34px; text-align:center; background:var(--surface)">
+        <p style="color:var(--muted); max-width:44ch; margin:0 auto">The force-directed graph is prototyped separately so it can be tuned on its own.</p>
+        <a href="./graph-lab.html" style="display:inline-flex; align-items:center; gap:8px; margin-top:20px; padding:9px 18px; border:1px solid var(--border-strong); border-radius:999px; text-decoration:none; font-size:14px">Open graph-lab.html →</a>
+      </div>
+    </main>
+
+    <!-- ============ CONTACT ============ -->
+    <main class="page" id="p-contact" hidden>
+      <div class="pagehead rise">
+        <span class="eyebrow mono">Toronto, Ontario</span>
+        <h1>Reach out</h1>
+        <p class="sub">hmu for collaborations, questions, or just to say hi.</p>
+      </div>
+      <ul class="dlist rise" style="animation-delay:.05s">
+        <li><b>Email</b> ronaktoprani@gmail.com</li>
+        <li><b>X</b> @ronak859</li>
+        <li><b>LinkedIn</b> /in/ronaktoprani</li>
+      </ul>
+    </main>
+  </div>
+</div>
+
+<!-- ================= OVERLAYS ================= -->
+<div class="scrim" id="scrim"></div>
+
+<aside class="detail peek" id="detail" role="dialog" aria-modal="true" aria-labelledby="dtitle">
+  <div class="dhead">
+    <div style="flex:1">
+      <h2 id="dtitle">Fixate</h2>
+      <span class="venue mono" id="dvenue">Chrome Extension (MV3) · 2026</span>
+    </div>
+    <button class="iconbtn" id="dclose" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <div class="dbody" id="dbody"></div>
+</aside>
+
+<div class="palette" id="palette" role="dialog" aria-modal="true" aria-label="Search">
+  <div class="inp">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--faint)"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" placeholder="Search anything — projects, galaxies, notes…" autocomplete="off">
+    <kbd style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--faint); border:1px solid var(--border); border-radius:4px; padding:1px 5px">esc</kbd>
+  </div>
+  <div class="plist" id="plist"></div>
+  <div class="pfoot"><span>↑↓ navigate</span><span>↵ open</span><span style="margin-left:auto" id="pcount"></span></div>
+</div>
+
+<script>
+/* ============================================================
+   DATA — real content lifted from src/App.tsx
+   ============================================================ */
+const WORK = [
+  {t:"Fixate", v:"Chrome Extension (MV3) · 2026", tags:["typescript","computer vision","local-first","product"], cat:["software","ai"],
+   d:"A Chrome extension (MV3) that verifies focus sessions with on-device computer vision. Pairs webcam gaze estimation (eye-blendshapes + head pose, with hysteresis to avoid false flags) with site-blocking via declarativeNetRequest, and logs per-session focus metrics locally. No backend.",
+   cards:[["Trustworthy gaze detection","Combines eye-blendshapes with head pose, applies hysteresis so it never flickers, and skips frames it isn't sure about instead of falsely flagging them."],["Specific attribution","The end report says what actually happened — “2 gaze drifts, left Chrome once, tried instagram.com twice” — and feeds a shareable focus card."],["Friction to quit","Ending early takes a press-and-hold or a typed reason, so a moment of weakness isn't one click away."],["Private by construction","No camera frames, blendshapes, or session data ever leave the machine. There is no server."]],
+   list:[["Site blocking","via declarativeNetRequest for the session's duration"],["Leaving-Chrome detection","through windows.onFocusChanged"],["Runs in the background","hidden document, live dashboard in the toolbar popout"],["Verified history","focus hours, clean streaks, and one pattern insight"]]},
+  {t:"whoomp", v:"On-device health app · iOS", tags:["local-first","on-device","bluetooth le","react native"], cat:["software","hardware"],
+   d:"A local-first iOS app (React Native / Expo) that reads live biometrics from a wearable over Bluetooth LE and computes HRV, recovery, and strain on-device. Decodes the raw framed sensor stream at the byte level and persists sessions locally with SQLite — no cloud or account.",
+   cards:[["Signal &amp; systems work","Talks directly to the wearable's sensors over a custom BLE service, decodes the raw framed stream at byte level (CRC-32 checked)."],["Stress scoring","Heart rate above resting baseline, gated on the accelerometer showing you're still — so a workout registers as strain, not stress."]],
+   list:[["Sleep staging","actigraphy fused with HR and HRV, smoothed by a transition model"],["Stack","Expo SDK 52+, react-native-ble-plx, expo-sqlite, EAS Build"]]},
+  {t:"kōdō", v:"Personal Dashboard · Local SLMs", tags:["node","local SLM","ollama","sqlite"], cat:["software","ai"],
+   d:"A local-first productivity dashboard that classifies task priority and estimates effort using two small language models running in parallel through Ollama. Adds natural-language date parsing, a calendar view, and SQLite-backed cross-device sync. Node/Express, no build step.",
+   cards:[["Two models, in parallel","Gemma categorizes priority; qwen2.5:1.5b estimates time in the background so the timeline fills in without blocking you."],["Natural-language dates","Understands tmr, this weekend, end of month, in 2 weeks, 3/15 — and drops the task on the right day."]],
+   list:[["Cross-device sync","same data on phone and laptop, all SQLite on the server"],["Analytics","streak, completion rate, activity heatmap, priority donut"]]},
+  {t:"CryptoRadar", v:"Market &amp; Compliance Terminal", tags:["next.js","react","fintech","data viz"], cat:["software","finance"],
+   d:"A real-time dashboard (Next.js 16 / React 19 / Recharts) that aggregates crypto market data and Americas regulatory signals into a single view — live market stats, ETF flows, a compliance calendar, and CBDC / stablecoin trackers, fed by public APIs and RSS.",
+   cards:[["Market layer","Live global stats (CoinGecko), a BTC/ETH 90-day correlation panel, ETF demand flows, and a stablecoin monitor."],["Regulatory layer","Country regulatory snapshot, compliance calendar, CBDC tracker, tokenization pipeline, RSS-driven intelligence feed."]], list:[]},
+  {t:"Mochi desk robot", v:"Embedded / Robotics · ESP32", tags:["esp32","embedded","local SLM","hardware"], cat:["hardware","ai"],
+   d:"An ESP32-based desk companion that runs a small language model on-device behind an animated LVGL touchscreen face. Firmware written in C++ / PlatformIO, iterated across several hardware revisions.", cards:[], list:[["Stack","ESP32, PlatformIO / C++, touchscreen UI, local SLM"]]},
+  {t:"XRP algo trading bot", v:"Crypto / Finance · In progress", tags:["python","finance","crypto","local SLM"], cat:["finance","ai"],
+   d:"A Python trading bot for XRP that combines classical quantitative signals with a locally-hosted small language model for short-horizon predictive modeling. In development.", cards:[], list:[]},
+  {t:"Dash Options chain Platform", v:"Finance / Derivatives", tags:["python","finance","data analysis","risk reversal"], cat:["finance"],
+   d:"Built an analytics dashboard for analyzing historical options chain data, focusing on risk reversal strategies, volatility skew, and time-series visualization. Built to aid my own trading strategies.",
+   cards:[], list:[["Calibration","Custom Black-Scholes &amp; SABR engine with real-time parameter fitting"],["Greeks","Live Delta, Gamma, Theta, Vega with directional exposure heatmaps"],["Density","Risk-neutral extraction via Breeden-Litzenberger"]]},
+  {t:"Galactic Mapping with Machine Learning", v:"James Webb Space Telescope", tags:["machine learning","astronomy","classification"], cat:["research","ai"],
+   d:"Developed a novel machine learning classification model to discern galactic components in JWST images of NGC 623, with an 84% accuracy. Built to probabilistically identify features such as star clusters, dust lanes, and galactic cores across multi-band photometric data.",
+   cards:[], list:[["Models","SVM, Random Forest, and KNN evaluated across classes C1–C5"],["Result","Average F1 of 0.84 — strong on background and bulge, weaker on outer disk"]]},
+  {t:"Bird Species Classification Algorithm", v:"Ontario Field Study", tags:["machine learning","bioacoustics","classification"], cat:["research","ai"],
+   d:"Prototype CNN using mel-spectrogram inputs to support automated bird species ID in Ontario field recordings.", cards:[], list:[]},
+  {t:"Multi-Module Spectral Analysis of PAH States", v:"NGC 2023 / Spitzer Space Telescope", tags:["astronomy","spectroscopy","signal processing"], cat:["research"],
+   d:"Developed a diagnostic framework to map ionic and neutral Polycyclic Aromatic Hydrocarbons (PAHs) by cross-calibrating IRAC photometry with IRS spectroscopy.", cards:[], list:[["Neutral PAH mapping","Isolated the 11.2µm band from SL1 and SH spectral cubes"],["Continuum subtraction","Local spline interpolation at 8.6µm and 12.7µm"]]},
+  {t:"CubeSat Satellite Project", v:"Ukpik-1 CubeSat", tags:["satellite","radio","engineering"], cat:["hardware","research"],
+   d:"Worked on the development of a radio station for the Ukpik-1 CubeSat satellite project @ Western University, specializing in assembly operations and implementing a comms center for real-time data transmission.", cards:[], list:[]},
+];
+
+const ASTRO = [
+  {n:"M101 (Pinwheel Galaxy)", f:"m101.jpg", g:"Canon mirrorless", d:"A grand-design face-on spiral in Ursa Major, with sweeping blue arms and pink star-forming regions."},
+  {n:"M27 (Dumbbell Nebula)", f:"M27(1).JPG", g:"Seestar S50", d:"A planetary nebula in Vulpecula, 1360 light-years away. One of the brightest and earliest discovered. Personal favourite."},
+  {n:"C27 (Crescent Nebula)", f:"C27(1).JPG", g:"Seestar S50", d:"An emission nebula in Cygnus, formed by stellar winds from a massive, incredibly hot star at its heart."},
+  {n:"Andromeda Galaxy (M31)", f:"andromeda.jpeg", g:"Canon mirrorless", d:"The closest major galaxy to the Milky Way, captured on a somewhat cloudy night in Toronto."},
+  {n:"M13 (Great Hercules Cluster)", f:"m13.jpg", g:"Seestar S50", d:"A globular cluster in Hercules — hundreds of thousands of stars bound into a dense sphere."},
+  {n:"IC 5070 (Pelican Nebula)", f:"IC5070(1).JPG", g:"Seestar S50", d:"A bright emission nebula in Cygnus, known for its distinctive pelican shape. But tbh I don't see it 🤷‍♂️"},
+];
+
+const CATS = [["all","All"],["software","Software"],["finance","Finance"],["ai","AI / ML"],["research","Research"],["hardware","Hardware"]];
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+let cat = "all";
+const $ = s => document.querySelector(s);
+
+function renderChips(){
+  $("#chips").innerHTML = CATS.map(([id,l]) =>
+    `<button class="chip${id===cat?" on":""}" data-cat="${id}">${l}</button>`).join("");
+}
+function renderRows(){
+  const shown = WORK.filter(w => cat==="all" || w.cat.includes(cat));
+  $("#rows").innerHTML = shown.map((w,i)=>`
+    <button class="row rise" style="animation-delay:${.05+i*.045}s" data-i="${WORK.indexOf(w)}">
+      <span class="idx">${String(i+1).padStart(2,"0")}</span>
+      <span>
+        <span class="venue mono">${w.v}</span>
+        <h3>${w.t}<span class="arw">→</span></h3>
+        <p>${w.d}</p>
+        <span class="tags">${w.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</span>
+      </span>
+    </button>`).join("");
+}
+function renderAstro(){
+  $("#astro").innerHTML = ASTRO.map((a,i)=>`
+    <button class="astro rise" style="animation-delay:${.06+i*.05}s">
+      <span class="frame"><img src="../public/${a.f}" alt="${a.n}" loading="lazy"></span>
+      <span class="cap">
+        <h4>${a.n}</h4>
+        <span class="gear mono">${a.g}</span>
+        <p>${a.d}</p>
+      </span>
+    </button>`).join("");
+}
+renderChips(); renderRows(); renderAstro();
+
+$("#chips").onclick = e => {
+  const b = e.target.closest("[data-cat]"); if(!b) return;
+  cat = b.dataset.cat; renderChips(); renderRows();
+};
+
+/* ---------- page switching ---------- */
+const PAGES = ["home","work","notes","graph","contact"];
+document.querySelectorAll(".navitem").forEach(b => b.onclick = () => {
+  const p = b.dataset.page;
+  document.querySelectorAll(".navitem").forEach(x => x.classList.toggle("on", x===b));
+  PAGES.forEach(id => $("#p-"+id).hidden = id!==p);
+  $("#crumb").textContent = p;
+  document.body.classList.remove("nav");
+  // replay entrance
+  $("#p-"+p).querySelectorAll(".rise").forEach(el=>{
+    el.style.animation="none"; void el.offsetWidth; el.style.animation="";
+  });
+});
+$("#menu").onclick = () => document.body.classList.toggle("nav");
+
+/* ---------- theme ---------- */
+const SUN = '<path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.7-5.7 1.4-1.4M4.9 19.1l1.4-1.4m11.4 0 1.4 1.4M4.9 4.9l1.4 1.4"/><circle cx="12" cy="12" r="4"/>';
+const MOON = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+$("#theme").onclick = () => {
+  const dark = document.documentElement.dataset.theme === "dark";
+  document.documentElement.dataset.theme = dark ? "light" : "dark";
+  $("#ticon").innerHTML = dark ? MOON : SUN;
+};
+
+/* ---------- mockup controls ---------- */
+$("#amb-on").onclick = () => { document.body.classList.add("ambient"); $("#amb-on").classList.add("on"); $("#amb-off").classList.remove("on"); };
+$("#amb-off").onclick = () => { document.body.classList.remove("ambient"); $("#amb-off").classList.add("on"); $("#amb-on").classList.remove("on"); };
+let mode = "peek";
+$("#d-peek").onclick = () => { mode="peek"; $("#detail").className="detail peek"; $("#d-peek").classList.add("on"); $("#d-modal").classList.remove("on"); };
+$("#d-modal").onclick = () => { mode="modal"; $("#detail").className="detail modal"; $("#d-modal").classList.add("on"); $("#d-peek").classList.remove("on"); };
+
+/* ---------- detail ---------- */
+let lastFocus = null;
+function openDetail(i){
+  const w = WORK[i];
+  lastFocus = document.activeElement;
+  $("#dtitle").textContent = w.t;
+  $("#dvenue").textContent = w.v;
+  $("#dbody").innerHTML = `
+    <p>${w.d}</p>
+    ${w.cards.length ? `<div class="dgrid">${w.cards.map(c=>`<div class="dcard"><div class="t">${c[0]}</div><div class="d">${c[1]}</div></div>`).join("")}</div>` : ""}
+    ${w.list.length ? `<ul class="dlist">${w.list.map(l=>`<li><b>${l[0]}</b><span>${l[1]}</span></li>`).join("")}</ul>` : ""}
+    <div class="tags" style="margin-top:24px">${w.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>`;
+  $("#detail").classList.add("show");
+  $("#scrim").classList.add("show");
+  $("#dclose").focus();
+}
+function closeDetail(){
+  $("#detail").classList.remove("show");
+  $("#scrim").classList.remove("show");
+  if(lastFocus) lastFocus.focus();
+}
+$("#rows").onclick = e => { const r = e.target.closest(".row"); if(r) openDetail(+r.dataset.i); };
+$("#dclose").onclick = closeDetail;
+$("#scrim").onclick = () => { closeDetail(); closePalette(); };
+
+/* ---------- palette ---------- */
+const INDEX = [
+  ...PAGES.map(p=>({tt:p[0].toUpperCase()+p.slice(1), ss:"Page", k:"page"})),
+  ...WORK.map(w=>({tt:w.t, ss:w.v, k:"project"})),
+  ...ASTRO.map(a=>({tt:a.n, ss:"Astrophotography · "+a.g, k:"astro"})),
+];
+const fold = s => s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+function search(q){
+  const s = fold(q.trim()); if(!s) return INDEX.slice(0,8);
+  return INDEX.filter(e => fold(e.tt+" "+e.ss).includes(s)).slice(0,12);
+}
+function renderPalette(){
+  const r = search($("#q").value);
+  $("#plist").innerHTML = r.map((e,i)=>`
+    <button class="pitem${i===0?" sel":""}">
+      <span class="pkind pk-${e.k}">${e.k}</span>
+      <span><span class="tt">${e.tt}</span><span class="ss">${e.ss}</span></span>
+    </button>`).join("") || `<div style="padding:26px; text-align:center; color:var(--faint); font-size:14px">No results.</div>`;
+  $("#pcount").textContent = r.length + (r.length===1?" result":" results");
+}
+function openPalette(){ $("#palette").classList.add("show"); $("#scrim").classList.add("show"); $("#q").value=""; renderPalette(); $("#q").focus(); }
+function closePalette(){ $("#palette").classList.remove("show"); if(!$("#detail").classList.contains("show")) $("#scrim").classList.remove("show"); }
+$("#opensearch").onclick = openPalette;
+$("#q").oninput = renderPalette;
+addEventListener("keydown", e => {
+  const typing = /INPUT|TEXTAREA/.test(e.target.tagName);
+  if((e.key.toLowerCase()==="k" && (e.metaKey||e.ctrlKey)) || (e.key==="/" && !typing)){ e.preventDefault(); openPalette(); }
+  if(e.key==="Escape"){ closePalette(); closeDetail(); }
+});
+
+/* ============================================================
+   AMBIENT BACKDROP — drifting starfield
+   Light mode: faint warm dust. Dark mode: real stars.
+   ============================================================ */
+(function(){
+  const c = $("#stars"), x = c.getContext("2d");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let w, h, stars = [], dpr = Math.min(devicePixelRatio||1, 2);
+
+  function resize(){
+    w = innerWidth; h = innerHeight;
+    c.width = w*dpr; c.height = h*dpr; c.style.width=w+"px"; c.style.height=h+"px";
+    x.setTransform(dpr,0,0,dpr,0,0);
+    const n = Math.round(w*h/9000);
+    stars = Array.from({length:n}, () => ({
+      x: Math.random()*w, y: Math.random()*h,
+      r: Math.random()*1.15 + .25,
+      a: Math.random()*.7 + .3,
+      vx: (Math.random()-.5)*.045,
+      vy: (Math.random()-.5)*.045,
+      tw: Math.random()*Math.PI*2,
+      ts: Math.random()*.012 + .004,
+    }));
+  }
+  function draw(){
+    const cs = getComputedStyle(document.documentElement);
+    const col = cs.getPropertyValue("--star").trim();
+    const base = parseFloat(cs.getPropertyValue("--star-a"));
+    x.clearRect(0,0,w,h);
+    for(const s of stars){
+      if(!reduce){
+        s.x += s.vx; s.y += s.vy; s.tw += s.ts;
+        if(s.x<-2) s.x=w+2; if(s.x>w+2) s.x=-2;
+        if(s.y<-2) s.y=h+2; if(s.y>h+2) s.y=-2;
+      }
+      const tw = reduce ? 1 : (.72 + .28*Math.sin(s.tw));
+      x.globalAlpha = base * s.a * tw;
+      x.fillStyle = col;
+      x.beginPath(); x.arc(s.x, s.y, s.r, 0, 6.284); x.fill();
+    }
+    x.globalAlpha = 1;
+    if(!reduce) requestAnimationFrame(draw);
+  }
+  addEventListener("resize", resize);
+  resize(); draw();
+})();
+</script>
+</body>
+</html>

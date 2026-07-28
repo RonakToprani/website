@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idea Graph — real physics, same look · ronak.to mockup</title>
+<style>
+/* ============================================================
+   IDEA GRAPH — your original node cards, now with real physics.
+   Same DOM-node + SVG-link approach as src/App.tsx:521,
+   except the hardcoded x/y are replaced by a live simulation.
+   No canvas, no colour-coded circles, no tuning panel.
+   ============================================================ */
+:root{
+  --page:#FAFAFA; --surface:#FFFFFF; --surface-2:#F7F7F8; --surface-3:#F1F1F2;
+  --ink:#18181B; --ink-2:#3F3F46; --muted:#71717A; --faint:#A1A1AA;
+  --border:#E7E7EA; --border-2:#D9D9DE;
+  --invert-bg:#18181B; --invert-fg:#FAFAFA;
+  --line:#E4E4E7; --line-on:#A1A1AA;
+  --sh-1:0 1px 2px rgba(24,24,27,.04);
+  --sh-2:0 1px 3px rgba(24,24,27,.06), 0 1px 2px rgba(24,24,27,.04);
+  --r-1:8px; --r-2:12px; --r-3:16px; --r-4:22px;
+  --e:cubic-bezier(.2,.8,.3,1);
+}
+[data-theme="dark"]{
+  --page:#0B0B0C; --surface:#141416; --surface-2:#1A1A1D; --surface-3:#202024;
+  --ink:#EDEDF0; --ink-2:#C4C4CB; --muted:#8F8F99; --faint:#68686F;
+  --border:rgba(255,255,255,.075); --border-2:rgba(255,255,255,.14);
+  --invert-bg:#EDEDF0; --invert-fg:#141416;
+  --line:rgba(255,255,255,.10); --line-on:rgba(255,255,255,.34);
+  --sh-1:none; --sh-2:0 1px 2px rgba(0,0,0,.5);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--page); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  transition:background .3s var(--e), color .3s var(--e)}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.018em;line-height:1.25}
+p{margin:0}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+:focus-visible{outline:2px solid var(--muted); outline-offset:2px; border-radius:6px}
+
+.wrap{max-width:1000px;margin:0 auto;padding:28px 24px 60px}
+.head{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px}
+.head h1{font-size:28px;letter-spacing:-.028em}
+.head .sub{color:var(--muted);font-size:15px;margin-top:7px}
+.head .right{margin-left:auto;display:flex;gap:8px;flex:none}
+.btn{padding:6px 13px;border:1px solid var(--border);border-radius:var(--r-2);font-size:13.5px;color:var(--muted);
+  transition:border-color .16s var(--e),color .16s var(--e),background .16s var(--e)}
+.btn:hover{border-color:var(--border-2);color:var(--ink);background:var(--surface-2)}
+.ibtn{width:32px;height:32px;border-radius:var(--r-1);display:grid;place-items:center;color:var(--muted);
+  border:1px solid var(--border);transition:background .16s var(--e),color .16s var(--e)}
+.ibtn:hover{background:var(--surface-2);color:var(--ink)}
+.ibtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+
+/* search — same as the original graph */
+.filter{position:relative;margin-bottom:12px}
+.filter svg{position:absolute;left:12px;top:11px;width:15px;height:15px;fill:none;stroke:var(--faint);stroke-width:1.9}
+.filter input{width:100%;border:1px solid var(--border);border-radius:var(--r-2);background:var(--surface);
+  padding:9px 12px 9px 34px;font:inherit;font-size:14px;color:var(--ink);outline:none;
+  transition:border-color .16s var(--e),box-shadow .16s var(--e)}
+.filter input::placeholder{color:var(--faint)}
+.filter input:focus{border-color:var(--border-2);box-shadow:var(--sh-1)}
+
+/* stage */
+.stage{position:relative;height:520px;border:1px solid var(--border);border-radius:var(--r-4);
+  background:var(--surface);box-shadow:var(--sh-2);overflow:hidden;touch-action:none;cursor:grab}
+.stage.grabbing{cursor:grabbing}
+.stage svg.links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.stage svg.links line{stroke:var(--line);stroke-width:1.5;transition:stroke .2s var(--e),stroke-opacity .2s var(--e)}
+.stage svg.links line.on{stroke:var(--line-on);stroke-width:1.8}
+.stage svg.links line.off{stroke-opacity:.25}
+
+.node{
+  position:absolute;left:0;top:0;width:142px;padding:8px 11px;text-align:left;
+  border:1px solid var(--border);border-radius:var(--r-2);background:var(--surface);
+  box-shadow:var(--sh-1);cursor:grab;
+  transition:border-color .18s var(--e),background .18s var(--e),opacity .22s var(--e),box-shadow .18s var(--e);
+  will-change:transform;
+}
+.node:hover{border-color:var(--border-2);background:var(--surface-2)}
+.node.on{background:var(--invert-bg);border-color:var(--invert-bg);box-shadow:var(--sh-2)}
+.node.on .k{color:var(--invert-fg);opacity:.55}
+.node.on .l{color:var(--invert-fg)}
+.node.dim{opacity:.28}
+.node.drag{cursor:grabbing;box-shadow:var(--sh-2);z-index:5}
+.node .k{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);
+  transition:color .18s var(--e)}
+.node .l{display:block;font-size:13.5px;font-weight:500;line-height:1.3;margin-top:3px;letter-spacing:-.01em;
+  transition:color .18s var(--e)}
+
+/* detail card, matching the original ActiveCard */
+.detail{margin-top:12px;border:1px solid var(--border);border-radius:var(--r-3);padding:16px 18px;
+  background:var(--surface);opacity:0;transform:translateY(-4px);height:0;overflow:hidden;
+  transition:opacity .24s var(--e),transform .24s var(--e)}
+.detail.show{opacity:1;transform:none;height:auto;overflow:visible}
+.detail .k{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.detail h3{font-size:16px;margin-top:5px}
+.detail p{font-size:14px;color:var(--ink-2);margin-top:6px;line-height:1.6}
+.detail .rel{margin-top:13px}
+.detail .rel .lab{font-size:12.5px;color:var(--muted);margin-bottom:7px;display:block}
+.detail .rel .row{display:flex;flex-wrap:wrap;gap:6px}
+.detail .rel button{border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:12.5px;color:var(--muted);
+  transition:border-color .16s var(--e),color .16s var(--e)}
+.detail .rel button:hover{border-color:var(--border-2);color:var(--ink)}
+
+.caption{font-size:13px;color:var(--muted);margin-top:14px;max-width:62ch}
+.hint{font-size:12.5px;color:var(--faint);margin-top:8px}
+
+@media (max-width:720px){
+  .wrap{padding:18px 14px 48px}
+  .stage{height:440px;border-radius:var(--r-3)}
+  .node{width:118px;padding:7px 9px}
+  .node .l{font-size:12.5px}
+  .head{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>Idea Graph</h1>
+      <p class="sub">A current map linking projects, papers, and concepts.</p>
+    </div>
+    <div class="right">
+      <button class="btn" id="reset">Re-layout</button>
+      <button class="ibtn" id="theme" aria-label="Toggle theme">
+        <svg id="ticon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="filter">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.4-3.4"/></svg>
+    <input id="q" placeholder="Search concepts, projects, posts…" autocomplete="off">
+  </div>
+
+  <div class="stage" id="stage">
+    <svg class="links" id="links"></svg>
+  </div>
+
+  <div class="detail" id="detail">
+    <span class="k" id="dk"></span>
+    <h3 id="dn"></h3>
+    <p id="dnote"></p>
+    <div class="rel"><span class="lab">Related</span><div class="row" id="drel"></div></div>
+  </div>
+
+  <p class="caption">a simplified representation of my work and ideas. It's not exhaustive, but I always find graphs help explain things.</p>
+  <p class="hint">Drag a node to move it — the rest settles around it. Click to focus. Drag the background to pan.</p>
+</div>
+
+<script>
+/* ---- the real mockGraph() data from src/App.tsx:631 ---- */
+const NODES = [
+  {id:"fixate",label:"Fixate",kind:"Project",note:"Local-CV Chrome extension that verifies real focus time."},
+  {id:"whoomp",label:"whoomp",kind:"Project",note:"Local-first health app: reads biometrics over BLE, computes recovery on-device."},
+  {id:"kodo",label:"kōdō",kind:"Project",note:"Productivity dashboard driven by local SLMs."},
+  {id:"cryptoradar",label:"CryptoRadar",kind:"Project",note:"Crypto regulatory + market intelligence terminal."},
+  {id:"options",label:"Options Chain Analytics",kind:"Project",note:"Analytics for historical options chain data."},
+  {id:"tradingbot",label:"XRP Trading Bot",kind:"Project",note:"Algorithmic trading bot pairing signals with a local SLM."},
+  {id:"mochi",label:"Mochi desk robot",kind:"Project",note:"ESP32 desk companion running a small language model."},
+  {id:"cubesat",label:"CubeSat (Ukpik-1)",kind:"Project",note:"Radio ground station for the Ukpik-1 CubeSat."},
+  {id:"galaxy",label:"Galactic Mapping ML",kind:"Research",note:"ML classification for galactic components (JWST)."},
+  {id:"spectral",label:"Spectral Emission Study",kind:"Research",note:"PAH spectroscopy of NGC 2023 (Spitzer)."},
+  {id:"birds",label:"Bird Species Classification",kind:"Research",note:"Bioacoustics CNN for bird species ID."},
+  {id:"ml",label:"AI / SLMs",kind:"Concept",note:"Machine learning and small on-device language models."},
+  {id:"finance",label:"Finance",kind:"Concept",note:"Options, risk, crypto, analytics."},
+  {id:"astro",label:"Astronomy",kind:"Concept",note:"Galaxies, nebulae, mapping."},
+  {id:"engineering",label:"Engineering",kind:"Concept",note:"Embedded, satellites, radio, hardware."},
+  {id:"trading",label:"Trading",kind:"Hobbies",note:"Algorithmic and discretionary trading strategies."},
+  {id:"astrophotography",label:"Astrophotography",kind:"Hobbies",note:"Capturing celestial objects with long exposures."},
+];
+const LINKS = [
+  ["fixate","ml"],["whoomp","engineering"],["whoomp","ml"],["kodo","ml"],["cryptoradar","finance"],
+  ["mochi","engineering"],["mochi","ml"],["options","finance"],["options","ml"],
+  ["galaxy","ml"],["galaxy","astro"],["birds","ml"],["spectral","astro"],["spectral","ml"],
+  ["cubesat","engineering"],["cubesat","astro"],["tradingbot","finance"],["tradingbot","ml"],
+  ["trading","finance"],["trading","ml"],["astrophotography","astro"],
+].map(([s,t])=>({s,t}));
+
+const $ = s => document.querySelector(s);
+const stage = $("#stage"), svg = $("#links");
+const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const byId = Object.fromEntries(NODES.map(n=>[n.id,n]));
+const nbr = {}; NODES.forEach(n => nbr[n.id] = new Set());
+LINKS.forEach(l => { nbr[l.s].add(l.t); nbr[l.t].add(l.s); });
+
+let W = 0, H = 0, alpha = 1, selected = null, dragging = null, pan = null;
+let offset = {x:0, y:0};
+let hidden = new Set();
+
+/* ---- build DOM ---- */
+NODES.forEach(n => {
+  const el = document.createElement("button");
+  el.className = "node";
+  el.innerHTML = `<span class="k">${n.kind}</span><span class="l">${n.label}</span>`;
+  el.dataset.id = n.id;
+  stage.appendChild(el);
+  n.el = el;
+});
+LINKS.forEach(l => {
+  const ln = document.createElementNS("http://www.w3.org/2000/svg","line");
+  svg.appendChild(ln);
+  l.el = ln;
+});
+
+function measure(){
+  const r = stage.getBoundingClientRect();
+  W = r.width; H = r.height;
+  NODES.forEach(n => {
+    const b = n.el.getBoundingClientRect();
+    n.w = b.width; n.h = b.height;
+    n.rad = Math.max(b.width, b.height) * 0.62;   // repulsion radius
+  });
+}
+
+function layout(){
+  // seed on a ring, grouped by kind so it settles into readable bands
+  const kinds = ["Concept","Project","Research","Hobbies"];
+  NODES.forEach((n,i) => {
+    const band = kinds.indexOf(n.kind);
+    const a = (i / NODES.length) * Math.PI * 2 + band * 0.9;
+    const r = 55 + band * 52;
+    n.x = Math.cos(a)*r + (Math.random()-.5)*20;
+    n.y = Math.sin(a)*r*0.72 + (Math.random()-.5)*20;
+    n.vx = 0; n.vy = 0; n.fixed = false;
+  });
+  offset = {x:0, y:0};
+  alpha = 1;
+}
+
+/* ---- physics ---- */
+const REP = 5200;     // repulsion strength
+const LEN = 132;      // preferred link length
+const STR = 0.022;    // spring stiffness
+const GRV = 0.0016;   // pull toward centre
+const DAMP = 0.84;
+
+function step(){
+  const a = alpha;
+
+  for(let i=0;i<NODES.length;i++){
+    const p = NODES[i]; if(hidden.has(p.id)) continue;
+    for(let j=i+1;j<NODES.length;j++){
+      const q = NODES[j]; if(hidden.has(q.id)) continue;
+      let dx = q.x-p.x, dy = q.y-p.y;
+      let d2 = dx*dx + dy*dy;
+      if(d2 < 4){ dx = Math.random()-.5; dy = Math.random()-.5; d2 = 4; }
+      const d = Math.sqrt(d2);
+      // rectangles: keep more room horizontally than vertically
+      const want = (p.rad + q.rad);
+      const f = (REP * a) / d2 * (d < want ? 2.2 : 1);
+      const fx = dx/d*f, fy = dy/d*f;
+      p.vx -= fx; p.vy -= fy; q.vx += fx; q.vy += fy;
+    }
+  }
+
+  for(const l of LINKS){
+    const s = byId[l.s], t = byId[l.t];
+    if(hidden.has(s.id) || hidden.has(t.id)) continue;
+    const dx = t.x-s.x, dy = t.y-s.y;
+    const d = Math.hypot(dx,dy) || 1;
+    const f = (d - LEN) * STR * a;
+    const fx = dx/d*f, fy = dy/d*f;
+    s.vx += fx; s.vy += fy; t.vx -= fx; t.vy -= fy;
+  }
+
+  for(const n of NODES){
+    if(hidden.has(n.id)) continue;
+    n.vx -= n.x * GRV * a;
+    n.vy -= n.y * GRV * a * 1.5;   // squash vertically — the stage is wide
+  }
+
+  const halfW = W/2 - 84, halfH = H/2 - 34;
+  for(const n of NODES){
+    if(n.fixed || hidden.has(n.id)){ n.vx = n.vy = 0; continue; }
+    n.vx *= DAMP; n.vy *= DAMP;
+    const sp = Math.hypot(n.vx,n.vy);
+    if(sp > 16){ n.vx = n.vx/sp*16; n.vy = n.vy/sp*16; }
+    n.x += n.vx; n.y += n.vy;
+    // soft walls
+    if(n.x < -halfW){ n.x = -halfW; n.vx *= -.4 }
+    if(n.x >  halfW){ n.x =  halfW; n.vx *= -.4 }
+    if(n.y < -halfH){ n.y = -halfH; n.vy *= -.4 }
+    if(n.y >  halfH){ n.y =  halfH; n.vy *= -.4 }
+  }
+
+  alpha *= 0.988;
+  if(alpha < 0.006) alpha = 0.006;
+}
+
+function paint(){
+  const cx = W/2 + offset.x, cy = H/2 + offset.y;
+  for(const n of NODES){
+    n.el.style.transform = `translate(${cx + n.x - n.w/2}px, ${cy + n.y - n.h/2}px)`;
+  }
+  for(const l of LINKS){
+    const s = byId[l.s], t = byId[l.t];
+    l.el.setAttribute("x1", cx + s.x); l.el.setAttribute("y1", cy + s.y);
+    l.el.setAttribute("x2", cx + t.x); l.el.setAttribute("y2", cy + t.y);
+  }
+}
+
+function frame(){ step(); paint(); requestAnimationFrame(frame); }
+
+/* ---- highlight ---- */
+function applyState(){
+  const q = $("#q").value.trim().toLowerCase();
+  hidden = new Set();
+  if(q){
+    const keep = new Set(NODES.filter(n => n.label.toLowerCase().includes(q)).map(n=>n.id));
+    // keep matches plus their direct neighbours, exactly like the original filter
+    const wide = new Set(keep);
+    keep.forEach(id => nbr[id].forEach(x => wide.add(x)));
+    NODES.forEach(n => { if(!wide.has(n.id)) hidden.add(n.id); });
+  }
+  const act = selected ? new Set([selected.id, ...nbr[selected.id]]) : null;
+
+  NODES.forEach(n => {
+    const isHidden = hidden.has(n.id);
+    n.el.style.display = isHidden ? "none" : "";
+    n.el.classList.toggle("on", selected && selected.id === n.id);
+    n.el.classList.toggle("dim", !!act && !act.has(n.id));
+  });
+  LINKS.forEach(l => {
+    const gone = hidden.has(l.s) || hidden.has(l.t);
+    l.el.style.display = gone ? "none" : "";
+    const hot = act && act.has(l.s) && act.has(l.t);
+    l.el.classList.toggle("on", !!hot);
+    l.el.classList.toggle("off", !!act && !hot);
+  });
+
+  const d = $("#detail");
+  if(!selected){ d.classList.remove("show"); return; }
+  $("#dk").textContent = selected.kind;
+  $("#dn").textContent = selected.label;
+  $("#dnote").textContent = selected.note;
+  $("#drel").innerHTML = [...nbr[selected.id]].map(id =>
+    `<button data-id="${id}">${byId[id].label}</button>`).join("");
+  d.classList.add("show");
+}
+
+/* ---- interaction ---- */
+let downAt = null, moved = false;
+stage.addEventListener("pointerdown", e => {
+  const nEl = e.target.closest(".node");
+  moved = false;
+  downAt = {x:e.clientX, y:e.clientY, ox:offset.x, oy:offset.y};
+  stage.setPointerCapture(e.pointerId);
+  if(nEl){
+    dragging = byId[nEl.dataset.id];
+    dragging.fixed = true;
+    nEl.classList.add("drag");
+    alpha = Math.max(alpha, .5);
+  } else {
+    pan = true; stage.classList.add("grabbing");
+  }
+});
+stage.addEventListener("pointermove", e => {
+  if(!downAt) return;
+  if(Math.abs(e.clientX-downAt.x) > 3 || Math.abs(e.clientY-downAt.y) > 3) moved = true;
+  const r = stage.getBoundingClientRect();
+  if(dragging){
+    dragging.x = (e.clientX - r.left) - W/2 - offset.x;
+    dragging.y = (e.clientY - r.top)  - H/2 - offset.y;
+    dragging.vx = dragging.vy = 0;
+    alpha = Math.max(alpha, .45);
+  } else if(pan){
+    offset.x = downAt.ox + (e.clientX - downAt.x);
+    offset.y = downAt.oy + (e.clientY - downAt.y);
+  }
+});
+function release(e){
+  if(dragging){ dragging.el.classList.remove("drag"); dragging.fixed = false; dragging = null; }
+  if(pan){ pan = false; stage.classList.remove("grabbing"); }
+  if(!moved && e && e.target.closest(".node")){
+    const n = byId[e.target.closest(".node").dataset.id];
+    selected = (selected && selected.id === n.id) ? null : n;
+    applyState();
+  } else if(!moved && e && !e.target.closest(".node")){
+    selected = null; applyState();
+  }
+  downAt = null;
+}
+stage.addEventListener("pointerup", release);
+stage.addEventListener("pointercancel", () => release(null));
+
+$("#drel").onclick = e => { const b = e.target.closest("[data-id]"); if(b){ selected = byId[b.dataset.id]; applyState(); } };
+$("#q").oninput = () => { selected = null; applyState(); alpha = Math.max(alpha,.6); };
+$("#reset").onclick = () => { layout(); selected = null; $("#q").value=""; applyState(); };
+addEventListener("keydown", e => { if(e.key === "Escape"){ selected = null; applyState(); } });
+addEventListener("resize", () => { measure(); alpha = Math.max(alpha,.3); });
+
+const SUN='<path d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.7-5.7 1.4-1.4M4.9 19.1l1.4-1.4m11.4 0 1.4 1.4M4.9 4.9l1.4 1.4"/><circle cx="12" cy="12" r="4"/>';
+const MOON='<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+$("#theme").onclick = () => {
+  const dark = document.documentElement.dataset.theme === "dark";
+  document.documentElement.dataset.theme = dark ? "light" : "dark";
+  $("#ticon").innerHTML = dark ? MOON : SUN;
+};
+
+/* ---- boot ---- */
+measure(); layout(); applyState();
+if(REDUCE){ for(let i=0;i<500;i++) step(); paint(); }
+else frame();
+</script>
+</body>
+</html>
