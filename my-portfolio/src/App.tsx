@@ -1397,6 +1397,23 @@ const WORK = [
             dated phrases are parsed and placed on a calendar. All inference runs locally through
             Ollama, so there are no API costs or network round-trips.
           </p>
+          <figure className="space-y-1.5">
+            <div className="rounded-xl border border-zinc-200 overflow-hidden bg-black">
+              <video
+                src="/kodo.mp4"
+                controls
+                loop
+                muted
+                autoPlay
+                playsInline
+                preload="metadata"
+                className="w-full block"
+              />
+            </div>
+            <figcaption className="text-xs text-zinc-500">
+              Demo — brain-dump input, local-SLM prioritization and time estimates, and the calendar filling in.
+            </figcaption>
+          </figure>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-zinc-200 p-3">
               <div className="font-medium mb-1">Two models, in parallel</div>
@@ -1934,16 +1951,21 @@ const SEARCH_INDEX: SearchEntry[] = [
   })),
 ];
 
+// Fold accents so "kodo" matches "kōdō", "andromeda" matches accented text, etc.
+const fold = (str: string) =>
+  str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 function searchAll(q: string): SearchEntry[] {
-  const s = q.trim().toLowerCase();
+  const s = fold(q.trim());
   if (!s) return [];
   const terms = s.split(/\s+/);
   return SEARCH_INDEX.map((e) => {
-    const hay = (e.title + " " + e.subtitle + " " + e.keywords).toLowerCase();
+    const hay = fold(e.title + " " + e.subtitle + " " + e.keywords);
+    const titleHay = fold(e.title);
     let score = 0;
     for (const t of terms) {
       if (!hay.includes(t)) return { e, score: -1 };
-      score += e.title.toLowerCase().includes(t) ? 3 : 1;
+      score += titleHay.includes(t) ? 3 : 1;
     }
     return { e, score };
   })
