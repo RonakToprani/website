@@ -1411,7 +1411,7 @@ const WORK = [
                 <img
                   src="/whoompstress.jpg"
                   alt="whoomp stress-through-the-day methodology"
-                  className="rounded-lg border border-zinc-200 w-full"
+                  className="rounded-lg border border-zinc-200 w-full max-w-[220px] mx-auto"
                 />
               </div>
             </div>
@@ -1439,7 +1439,7 @@ const WORK = [
                 <img
                   src="/whoompsleep.jpg"
                   alt="whoomp sleep staging and sleep-need methodology"
-                  className="rounded-lg border border-zinc-200 w-full"
+                  className="rounded-lg border border-zinc-200 w-full max-w-[170px] mx-auto"
                 />
               </div>
             </div>
