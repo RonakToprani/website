@@ -7,10 +7,23 @@ import {
   Lightbulb,
   GitBranch,
   Search,
-  Clock,
   ExternalLink,
   User,
+  Moon,
+  Telescope,
 } from "lucide-react";
+import {
+  SITE,
+  clockTime,
+  dms,
+  hms,
+  moonPhase,
+  moonPosition,
+  nextDarkWindow,
+  reportTarget,
+  toHorizontal,
+  type Status,
+} from "./sky";
 
 
 
@@ -24,6 +37,13 @@ export type AstroObj = {
   files: string[];
   desc: string;
   gear?: string;
+  // J2000 position, in degrees. Objects without one are simply left out of the
+  // "Tonight's Sky" block — see the note at the bottom of it.
+  ra?: number;
+  dec?: number;
+  // Distance in light years, and what was happening here when that light left.
+  distanceLy?: number;
+  lightLeft?: string;
 };
 
 export const ASTRO: AstroObj[] = [
@@ -33,6 +53,10 @@ export const ASTRO: AstroObj[] = [
     files: ["C27(1).JPG", "C27(2).JPG"],
     desc: "An emission nebula in Cygnus, formed by stellar winds from a massive, incredibly hot star at its heart.",
     gear: "Seestar S50",
+    ra: hms(20, 12, 7),
+    dec: dms(38, 21, 18),
+    distanceLy: 5000,
+    lightLeft: "writing was being invented in Mesopotamia",
   },
   {
     name: "IC 5070 (Pelican Nebula)",
@@ -40,6 +64,10 @@ export const ASTRO: AstroObj[] = [
     files: ["IC5070(1).JPG", "IC5070(2).JPG"],
     desc: "A bright emission nebula in Cygnus, known for its distinctive pelican shape. But tbh I don't see it 🤷‍♂️",
     gear: "Seestar S50",
+    ra: hms(20, 50, 48),
+    dec: dms(44, 21, 0),
+    distanceLy: 1800,
+    lightLeft: "the Han dynasty was falling apart",
   },
   {
     name: "M27 (Dumbbell Nebula)",
@@ -47,6 +75,10 @@ export const ASTRO: AstroObj[] = [
     files: ["M27(1).JPG", "M27(2).JPG"],
     desc: "A planetary nebula in Vulpecula, 1360 light-years away. One of the brightest and earliest discovered. Personal favourite.",
     gear: "Seestar S50",
+    ra: hms(19, 59, 36.3),
+    dec: dms(22, 43, 16),
+    distanceLy: 1360,
+    lightLeft: "the Tang dynasty was near its height",
   },
   {
     name: "M97 (Owl Nebula)",
@@ -54,6 +86,10 @@ export const ASTRO: AstroObj[] = [
     files: ["m97.jpeg", "m97-2.jpeg"],
     desc: "A planetary nebula in Ursa Major, showing its faint structure.",
     gear: "Seestar S50",
+    ra: hms(11, 14, 47.7),
+    dec: dms(55, 1, 9),
+    distanceLy: 2030,
+    lightLeft: "the common era was just beginning",
   },
   {
     name: "M81 (Bode's Galaxy)",
@@ -61,6 +97,10 @@ export const ASTRO: AstroObj[] = [
     files: ["m81.jpeg", "m81-2.jpeg"],
     desc: "A spiral galaxy in Ursa Major, imaged on two different nights.",
     gear: "Seestar S50",
+    ra: hms(9, 55, 33.2),
+    dec: dms(69, 3, 55),
+    distanceLy: 11_800_000,
+    lightLeft: "our lineage hadn't yet split from chimpanzees",
   },
   {
     name: "Andromeda Galaxy (M31)",
@@ -68,6 +108,10 @@ export const ASTRO: AstroObj[] = [
     files: ["andromeda.jpeg"],
     desc: "The closest major galaxy to the Milky Way, captured on a somewhat cloudy night in Toronto.",
     gear: "Canon mirrorless",
+    ra: hms(0, 42, 44.3),
+    dec: dms(41, 16, 9),
+    distanceLy: 2_537_000,
+    lightLeft: "our ancestors were Homo habilis — no Homo sapiens yet",
   },
   // ── New (July 2026) — filenames are drop-in targets; identities pending confirmation ──
   {
@@ -76,6 +120,10 @@ export const ASTRO: AstroObj[] = [
     files: ["m13.jpg", "m13-2.jpg"],
     desc: "A globular cluster in Hercules — hundreds of thousands of stars bound into a dense sphere. Two processing passes of the same night.",
     gear: "Seestar S50",
+    ra: hms(16, 41, 41.2),
+    dec: dms(36, 27, 36),
+    distanceLy: 22_200,
+    lightLeft: "the last ice age was at its peak",
   },
   {
     name: "M101 (Pinwheel Galaxy)",
@@ -83,6 +131,10 @@ export const ASTRO: AstroObj[] = [
     files: ["m101.jpg", "m101-2.jpg"],
     desc: "A grand-design face-on spiral in Ursa Major, with sweeping blue arms and pink star-forming regions. Shown fully processed and as the raw stack.",
     gear: "Canon mirrorless",
+    ra: hms(14, 3, 12.6),
+    dec: dms(54, 20, 57),
+    distanceLy: 21_000_000,
+    lightLeft: "apes were first spreading across Africa, in the Miocene",
   },
   {
     name: "Faint face-on spiral",
@@ -475,39 +527,172 @@ function DerivationBlock() {
 }
 
 
-// Unusual micro-feature: a scrubber that "replays" a week of work logs (fictional data here)
-function TimeMachine() {
-  const [t, setT] = useState(3);
-  const logs = [
-    { day: "Spark of Curiosity", note: "What if machine learning could map more than just shape of galaxies?" },
-    { day: "Building the Model", note: "Wrote a convergence test harness." },
-    { day: " Discovery", note: "Found a pattern in dust lanes. But tricky to work with these kinds of images.." },
-    { day: "Main Discovery", note: "Training different types of classifiers and testing" },
-    { day: "Applied to real world", note: "Applied model to galaxy wide images to test overall accuracy" },
-  ];
+// ==================================================================
+// Tonight's Sky — the one block on this site that isn't written, it's computed.
+//
+// Takes the targets I've already shot (the ASTRO list above), works out where
+// each one actually is over Toronto at this exact moment, how high it climbs
+// while the sky is dark tonight, and whether the moon is in the way. All of it
+// runs locally in the browser — see src/sky.ts. Nothing here is fetched, and
+// nothing here is hardcoded except the coordinates themselves.
+//
+// Each row also carries how long its light has been travelling, which is the
+// part I find hardest to stop thinking about.
+// ==================================================================
+
+const STATUS_STYLE: Record<Status, { label: string; dot: string; pill: string }> = {
+  prime: {
+    label: "Prime",
+    dot: "bg-emerald-500",
+    pill: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+  workable: {
+    label: "Workable",
+    dot: "bg-amber-500",
+    pill: "border-amber-200 bg-amber-50 text-amber-700",
+  },
+  low: { label: "Too low", dot: "bg-zinc-400", pill: "border-zinc-200 bg-zinc-50 text-zinc-500" },
+  no: { label: "Not tonight", dot: "bg-zinc-300", pill: "border-zinc-200 bg-white text-zinc-400" },
+};
+
+// "21 million" / "22,200" — light years read better without a decimal tail.
+function formatLy(ly: number): string {
+  if (ly >= 1_000_000) return `${+(ly / 1_000_000).toFixed(1)} million`;
+  return ly.toLocaleString();
+}
+
+function TonightsSky({
+  photos,
+  onOpen,
+}: {
+  photos: AstroObj[];
+  onOpen: (objIdx: number) => void;
+}) {
+  // Re-tick every minute. The sky rotates a quarter degree in that time, which
+  // is enough to move a target across a status boundary while you're reading.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const { dark, moon, rows, unplotted, oldest } = useMemo(() => {
+    const dark = nextDarkWindow(now);
+    const moon = { ...moonPhase(now), alt: toHorizontal(moonPosition(now), now).alt };
+
+    const rows = photos
+      .map((obj, objIdx) => ({ obj, objIdx }))
+      .filter(({ obj }) => obj.ra !== undefined && obj.dec !== undefined)
+      .map(({ obj, objIdx }) => ({
+        obj,
+        objIdx,
+        report: reportTarget({ ra: obj.ra!, dec: obj.dec! }, now, dark),
+      }))
+      .sort((a, b) => b.report.peakAlt - a.report.peakAlt);
+
+    return {
+      dark,
+      moon,
+      rows,
+      unplotted: photos.filter((o) => o.ra === undefined).length,
+      oldest: Math.max(...photos.map((o) => o.distanceLy ?? 0)),
+    };
+  }, [photos, now]);
+
   return (
     <div className="rounded-2xl border border-zinc-200 p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="font-medium flex items-center gap-2">
-          <Clock className="size-4" /> Research Replay
+          <Telescope className="size-4" /> Tonight's Sky
         </h4>
-        <div className="text-xs text-zinc-500">Scrub to see snapshots</div>
+        <div className="flex items-center gap-2 text-xs text-zinc-500">
+          <span className="relative flex size-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+          </span>
+          live over {SITE.label} · {clockTime(now)}
+        </div>
       </div>
-      <input
-        className="w-full mt-3"
-        type="range"
-        min={0}
-        max={logs.length - 1}
-        value={t}
-        onChange={(e) => setT(parseInt(e.target.value))}
-      />
-      <div className="mt-3 grid grid-cols-5 gap-2 text-xs">
-        {logs.map((l, i) => (
-          <div key={l.day} className={`rounded-xl border p-2 ${i <= t ? "bg-zinc-50" : "opacity-50"}`}>
-            <div className="font-medium">{l.day}</div>
-            <div className="text-zinc-600">{l.note}</div>
-          </div>
-        ))}
+
+      <p className="mt-1 text-sm text-zinc-500">
+        Where my targets actually are right now, and which ones are worth setting up for.
+      </p>
+
+      {/* Conditions strip — the two things that decide the night */}
+      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+        <span className="rounded-xl border border-zinc-200 bg-zinc-50 px-2 py-1 text-zinc-600">
+          {dark ? (
+            <>
+              {dark.nautical ? "Nautical dark" : "Astronomical dark"} {clockTime(dark.start)} →{" "}
+              {clockTime(dark.end)}
+            </>
+          ) : (
+            "No real darkness tonight"
+          )}
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 bg-zinc-50 px-2 py-1 text-zinc-600">
+          <Moon className="size-3" />
+          {Math.round(moon.illumination * 100)}% {moon.name}
+          {moon.alt > 0 ? " · up now" : " · below horizon"}
+        </span>
+      </div>
+
+      <div className="mt-3 divide-y divide-zinc-100">
+        {rows.map(({ obj, objIdx, report }) => {
+          const s = STATUS_STYLE[report.status];
+          return (
+            <button
+              key={obj.name}
+              onClick={() => onOpen(objIdx)}
+              className="group w-full py-2.5 text-left hover:bg-zinc-50/70 rounded-xl px-2 -mx-2 transition"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`size-2 shrink-0 rounded-full ${s.dot}`} />
+                  <span className="text-sm font-medium truncate group-hover:underline">
+                    {obj.name}
+                  </span>
+                  <span className={`shrink-0 rounded-lg border px-1.5 py-0.5 text-[10px] ${s.pill}`}>
+                    {s.label}
+                  </span>
+                  {report.moonWashed && (
+                    <span className="shrink-0 rounded-lg border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] text-zinc-500">
+                      moon nearby
+                    </span>
+                  )}
+                </div>
+                <div className="shrink-0 text-xs text-zinc-500 tabular-nums">
+                  {!report.peakAt ? (
+                    "down all night"
+                  ) : report.pastBest ? (
+                    <>
+                      {Math.round(report.peakAlt)}° now · {report.rising ? "climbing" : "sinking"}
+                    </>
+                  ) : (
+                    <>
+                      peaks {Math.round(report.peakAlt)}° at {clockTime(report.peakAt)}
+                    </>
+                  )}
+                </div>
+              </div>
+              {obj.distanceLy && (
+                <div className="mt-0.5 pl-4 text-xs text-zinc-400">
+                  {formatLy(obj.distanceLy)} light years — that light left when {obj.lightLeft}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 text-xs text-zinc-500">
+        Computed in your browser from J2000 coordinates and {SITE.label}'s latitude — no API, no
+        server. "Prime" means it clears 45° while the sky is dark; below ~25° there's too much
+        atmosphere and city glow to bother.
+        {unplotted > 0 && (
+          <> {unplotted} unidentified faint fields aren't plotted until I plate-solve them.</>
+        )}{" "}
+        The oldest light here has been travelling {formatLy(oldest)} years.
       </div>
     </div>
   );
@@ -966,7 +1151,7 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
         )}
       </AnimatePresence>
 
-      <TimeMachine />
+      <TonightsSky photos={astroPhotos} onOpen={(objIdx) => setGallery({ objIdx, imgIdx: 0 })} />
     </div>
   );
 }
@@ -2007,6 +2192,7 @@ const SEARCH_INDEX: SearchEntry[] = [
   { title: "Idea Graph", subtitle: "Map of work & concepts", kind: "Page", route: "graph", keywords: "graph map ideas concepts connections" },
   { title: "Contact", subtitle: "Email & socials", kind: "Page", route: "contact", keywords: "contact email twitter x linkedin socials reach out hire" },
   { title: "aims without attachment", subtitle: "Note · Philosophy", kind: "Note", route: "blog", keywords: "taoism philosophy wu wei note writing laozi" },
+  { title: "Tonight's Sky", subtitle: "Live · What's up over Toronto", kind: "Page", route: "blog", keywords: "tonight sky live observing targets altitude moon phase dark astronomical twilight telescope toronto what to shoot" },
   ...WORK.map((w): SearchEntry => ({
     title: w!.title,
     subtitle: w!.venue,
