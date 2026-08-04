@@ -1,0 +1,29 @@
+# Netlify build configuration.
+#
+# The git root is this directory (RonakPortal/), but the site itself lives one
+# level down in my-portfolio/. Without `base`, Netlify runs the build at the
+# repo root — where there is no package.json — and then publishes a `dist` that
+# doesn't exist, which serves a 404 for every path including static assets.
+#
+# Keeping this in the repo rather than only in the Netlify dashboard means the
+# settings are versioned and can't silently drift. netlify.toml takes
+# precedence over the dashboard's build settings.
+
+[build]
+  base = "my-portfolio"
+  command = "npm run build"
+  # Relative to `base`, so this resolves to my-portfolio/dist
+  publish = "dist"
+
+[build.environment]
+  # vite 7 requires node ^20.19.0 || >=22.12.0. Netlify's default is older than
+  # that on existing sites, which fails the build outright.
+  NODE_VERSION = "22"
+
+# The app does its own routing in component state rather than through the URL,
+# so there is only ever one real document — but this keeps a direct hit on any
+# path serving the app instead of Netlify's 404 page.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
