@@ -2,3 +2,153 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================================
+   Typography
+   Inter is now actually loaded (see index.html). These are the
+   details that separate "the font is set" from "the font looks set":
+   proper smoothing, real optical sizing, and tighter tracking on
+   headings, which Inter needs at display sizes.
+   ========================================================= */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-optical-sizing: auto;
+    font-feature-settings: "cv05" 1, "ss01" 1; /* single-storey g, nicer arrows */
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.021em;
+  }
+
+  /* Numbers in stat rows, altitudes, timings — keep columns from dancing. */
+  .tabular-nums, kbd, code {
+    font-variant-numeric: tabular-nums;
+  }
+
+  body {
+    background: #ffffff;
+    color: #18181b;
+  }
+}
+
+/* =========================================================
+   Dark mode
+   The app's palette is almost entirely zinc + white, so rather than
+   adding a dark: variant to several hundred classNames, the handful
+   of utilities actually in use are remapped here under .dark. The
+   markup in App.tsx is untouched.
+
+   Palette: near-black page, slightly lifted surfaces, low-contrast
+   hairlines. Deliberately not pure #000 — pure black makes borders
+   and shadows impossible and reads as cheap.
+   ========================================================= */
+:root {
+  --d-page: #0a0a0b;
+  --d-surface: #121214;
+  --d-raised: #17171a;
+  --d-hairline: #26262b;
+  --d-hairline-2: #303038;
+  --d-ink: #ededf0;
+  --d-ink-2: #c9c9d1;
+  --d-muted: #a1a1aa;
+  --d-muted-2: #8b8b95;
+  --d-faint: #6c6c76;
+}
+
+.dark body {
+  background: var(--d-page);
+  color: var(--d-ink);
+}
+
+/* --- surfaces --- */
+.dark .bg-white { background-color: var(--d-surface); }
+.dark .bg-zinc-50 { background-color: var(--d-raised); }
+.dark .bg-zinc-100 { background-color: #1d1d21; }
+.dark .bg-white\/80 { background-color: rgba(18, 18, 20, 0.8); }
+.dark .bg-white\/60 { background-color: rgba(18, 18, 20, 0.6); }
+.dark .bg-zinc-50\/70 { background-color: rgba(23, 23, 26, 0.7); }
+
+/* --- hairlines --- */
+.dark .border-zinc-100 { border-color: #1f1f24; }
+.dark .border-zinc-200 { border-color: var(--d-hairline); }
+.dark .border-zinc-300 { border-color: var(--d-hairline-2); }
+.dark .border-zinc-400,
+.dark .border-zinc-500 { border-color: #4a4a55; }
+.dark .divide-zinc-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1f1f24; }
+.dark .ring-zinc-300 { --tw-ring-color: #3f3f48; }
+
+/* --- text --- */
+.dark .text-zinc-900,
+.dark .text-zinc-800 { color: var(--d-ink); }
+.dark .text-zinc-700 { color: var(--d-ink-2); }
+.dark .text-zinc-600 { color: var(--d-muted); }
+.dark .text-zinc-500 { color: var(--d-muted-2); }
+.dark .text-zinc-400 { color: var(--d-faint); }
+
+/* --- inverted pills (active nav, selected filter, kind badges) ---
+   These are dark-on-light by design, so in dark mode they flip to
+   light-on-dark. The :not(section) keeps the deliberately-black
+   "Wu Wei" panel in the Taoism note exactly as it is. */
+.dark .bg-zinc-900.text-white:not(section) {
+  background-color: var(--d-ink);
+  color: #0b0b0d;
+}
+.dark .bg-zinc-900.text-white:not(section).border-zinc-900 { border-color: var(--d-ink); }
+.dark .border-zinc-900:not(.bg-zinc-900) { border-color: #d4d4d8; }
+.dark .bg-zinc-300 { background-color: #3f3f48; }
+.dark .bg-zinc-400 { background-color: #52525b; }
+
+/* --- hover states that assume a light background --- */
+.dark .hover\:bg-zinc-50:hover { background-color: #1c1c20; }
+.dark .hover\:bg-white:hover { background-color: var(--d-raised); }
+.dark .hover\:border-zinc-400:hover { border-color: #55555f; }
+.dark .hover\:border-zinc-500:hover { border-color: #62626d; }
+.dark .hover\:text-zinc-900:hover { color: var(--d-ink); }
+.dark .hover\:text-zinc-600:hover { color: var(--d-muted); }
+.dark .hover\:border-zinc-300:hover { border-color: var(--d-hairline-2); }
+.dark .hover\:bg-zinc-50\/70:hover { background-color: rgba(23, 23, 26, 0.7); }
+
+/* --- accents: same hue, tuned for a dark ground --- */
+.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.12); }
+.dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.18); }
+.dark .text-emerald-700 { color: #4ade9f; }
+.dark .border-emerald-200 { border-color: rgba(16, 185, 129, 0.3); }
+.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.12); }
+.dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.18); }
+.dark .text-amber-700 { color: #f0b64b; }
+.dark .border-amber-200 { border-color: rgba(245, 158, 11, 0.3); }
+
+/* --- shadows read as smudges on dark; deepen them --- */
+.dark .shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+.dark .shadow-xl { box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65); }
+.dark .shadow-2xl { box-shadow: 0 28px 60px rgba(0, 0, 0, 0.7); }
+.dark .shadow-\[0_1px_3px_rgba\(0\2c 0\2c 0\2c 0\.05\)\] {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+/* --- the Idea Graph draws its links with a literal hex stroke --- */
+.dark svg line[stroke="#e6e6e6"] { stroke: #2c2c33; }
+.dark svg line[stroke="#a1a1aa"] { stroke: #5b5b66; }
+
+/* Brand marks used to be flat black bitmaps that vanished on a dark ground.
+   They're inline SVGs in currentColor now, so they need nothing here — but
+   the wrapping <a> has no colour of its own, so pin them to the body ink. */
+.dark a > svg[fill="currentColor"] { color: var(--d-ink); }
+
+/* --- form controls --- */
+.dark input,
+.dark textarea {
+  background-color: transparent;
+  color: var(--d-ink);
+}
+.dark input::placeholder { color: var(--d-faint); }
+.dark ::selection { background: rgba(237, 237, 240, 0.18); }
+
+/* Scrollbars and native widgets follow the theme. */
+.dark { color-scheme: dark; }
+
+/* Astro images are the point of the Notes page — don't let a dark
+   surface make them look washed out behind a border. */
+.dark img { border-color: var(--d-hairline); }

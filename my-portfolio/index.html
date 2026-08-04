@@ -3,8 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg" href="/logo.svg" />
-    <link href="https://fonts.googleapis.com/css?family=Playfair+Display:400,700&display=swap" rel="stylesheet">
+    <!-- Inter is what tailwind.config.js has always asked for as the sans stack;
+         it was just never actually loaded, so the site silently fell back to the
+         system font. (Playfair Display was loaded here but used nowhere.) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap"
+      rel="stylesheet"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0b" />
+    <!-- Resolve the theme before first paint, otherwise a dark-mode visitor gets
+         a white flash while the bundle loads. Mirrors the logic in App.tsx. -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("theme");
+          var dark = saved ? saved === "dark"
+            : window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.classList.toggle("dark", dark);
+        } catch (e) {}
+      })();
+    </script>
     <title>Ronak Toprani — builder, researcher, astrophotographer</title>
     <meta name="description" content="Ronak Toprani builds local-first tools and small on-device AI — focus software, wearables, and desk robots — alongside physics research and astrophotography." />
     <meta name="author" content="Ronak Toprani" />

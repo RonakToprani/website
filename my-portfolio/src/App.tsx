@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
@@ -10,6 +10,8 @@ import {
   ExternalLink,
   User,
   Moon,
+  Sun,
+  Github,
   Telescope,
 } from "lucide-react";
 import {
@@ -152,6 +154,10 @@ export const ASTRO: AstroObj[] = [
   },
 ];
 
+// Where a deep link should land: a specific galaxy, a specific project, or a
+// pre-filtered category on the projects page.
+export type FocusTarget = { astro?: string; project?: string; category?: string };
+
 // =======
 // Layout
 // =======
@@ -159,9 +165,9 @@ export default function Portfolio() {
   const [route, setRoute] = useState("home");
   const [paletteOpen, setPaletteOpen] = useState(false);
   // Deep-link target set by the universal search (e.g. open a galaxy or a project)
-  const [focus, setFocus] = useState<{ astro?: string; project?: string } | null>(null);
+  const [focus, setFocus] = useState<FocusTarget | null>(null);
 
-  const go = (to: string, f?: { astro?: string; project?: string }) => {
+  const go = (to: string, f?: FocusTarget) => {
     setRoute(to);
     setFocus(f ?? null);
   };
@@ -215,12 +221,12 @@ export default function Portfolio() {
               )}
               {route === "graph" && (
                 <Page key="graph" title="Idea Graph" subtitle="A current map linking projects, papers, and concepts.">
-                  <IdeaGraph />
+                  <IdeaGraph onNavigate={go} />
                 </Page>
               )}
               {route === "work" && (
                 <Page key="work" title="Projects + Research" subtitle="Selected research, builds, and experiments.">
-                  <ProjectsResearch focusProject={focus?.project} />
+                  <ProjectsResearch focusProject={focus?.project} focusCategory={focus?.category} />
                 </Page>
               )}
               {route === "contact" && (
@@ -240,6 +246,44 @@ export default function Portfolio() {
       />
       <Footer />
     </div>
+  );
+}
+
+// Theme toggle. The initial class is set by the inline script in index.html so
+// there's no white flash on load; this only has to keep up with it afterwards.
+// An explicit choice is remembered; until then the OS preference wins.
+function ThemeToggle() {
+  const [dark, setDark] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
+
+  // Follow the OS until the visitor expresses a preference of their own.
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = (e: MediaQueryListEvent) => {
+      if (!localStorage.getItem("theme")) setDark(e.matches);
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return (
+    <button
+      onClick={() => {
+        const next = !dark;
+        setDark(next);
+        localStorage.setItem("theme", next ? "dark" : "light");
+      }}
+      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      title={dark ? "Light mode" : "Dark mode"}
+      className="grid size-8 place-items-center rounded-xl border border-zinc-300 text-zinc-600 transition hover:bg-zinc-50"
+    >
+      {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    </button>
   );
 }
 
@@ -266,6 +310,7 @@ function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
             <span>Search</span>
             <kbd className="ml-2 hidden sm:inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-1.5 text-[10px] text-zinc-500">⌘K</kbd>
           </button>
+          <ThemeToggle />
         </div>
       </div>
     </div>
@@ -343,7 +388,7 @@ function Hero(){
         hola
         </h1>
         <p className="text-zinc-600 max-w-2xl">
-          I’m <span className="font-medium">Ronak Toprani</span> — I work on tech in finance by day and build products the rest of the time. Lately that means <span className="font-medium">local-first tools</span> and <span className="font-medium">small on-device AI</span>: focus software, wearables, and desk robots. I also love physics, astrophotography, and philosophy. This is where it all lives.
+          I’m <span className="font-medium">Ronak Toprani</span> — I currently spend my days working on tech in finance, love physics and philosophy, and build cool things sometimes. this is my portfolio. 
         </p>
          <img
           src="/home.jpeg"
@@ -702,20 +747,328 @@ function TonightsSky({
 // graphing IDEAS feature. brain map sorta
 // ==================
 // Idea Graph: map relationships between projects, blog posts, and research topics.
-// Lightweight (no external graph lib) with fixed positions + simple link routing.
-function IdeaGraph() {
+// Same cards, same links, same palette as it has always had — but the hardcoded
+// coordinates are now just the seed positions for a live simulation. Every node
+// is a mass on a spring: linked nodes pull together, unlinked ones push apart,
+// and the whole thing falls gently toward the middle of the stage. Grab one and
+// the rest rearrange around it; let go and it keeps its momentum.
+//
+// No physics library — it's a few hundred lines of Verlet-ish integration below.
+
+type Body = { x: number; y: number; vx: number; vy: number; w: number; h: number; fixed: boolean };
+
+const REP = 5200; // repulsion between any two nodes
+const LEN = 132; // preferred link length
+const STR = 0.022; // spring stiffness
+const GRV = 0.0016; // pull toward the centre of the stage
+const DAMP = 0.84; // velocity damping per frame — what makes it settle
+const VMAX = 16; // speed cap, so a hard fling can't launch a card off-screen
+
+// One search term against one haystack. Terms of 1-2 characters have to match a
+// whole word: otherwise "ai" hits "Options Chain Analytics" through the "ai" in
+// "Chain", and "ml" hits almost nothing you meant.
+const termHit = (hay: string, term: string) => {
+  if (term.length > 2) return hay.includes(term);
+  const esc = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${esc}([^a-z0-9]|$)`).test(hay);
+};
+
+function IdeaGraph({ onNavigate }: { onNavigate: (to: string, f?: FocusTarget) => void }) {
   const { nodes, links } = useMemo(() => mockGraph(), []);
   const [active, setActive] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
 
-  const filtered = useMemo(() => {
-    if (!filter) return { nodes, links };
-    const f = filter.toLowerCase();
-    const keep = new Set(nodes.filter((n) => n.label.toLowerCase().includes(f)).map((n) => n.id));
-    const l2 = links.filter((l) => keep.has(l.source) || keep.has(l.target));
-    const n2 = nodes.filter((n) => keep.has(n.id) || l2.some((l) => l.source === n.id || l.target === n.id));
-    return { nodes: n2, links: l2 };
+  // Matches, plus anything directly linked to a match — the neighbours are the
+  // whole point of a graph, but they're dimmed so you can tell them from hits.
+  // Hidden nodes drop out of the simulation too, so the rest close the gap.
+  const search = useMemo(() => {
+    const q = fold(filter.trim());
+    if (!q) return { hidden: new Set<string>(), context: new Set<string>(), hits: 0 };
+    const terms = q.split(/\s+/);
+    const keep = new Set(
+      nodes
+        .filter((n) => {
+          const hay = fold(`${n.label} ${n.kind} ${n.note} ${n.keywords ?? ""}`);
+          return terms.every((t) => termHit(hay, t));
+        })
+        .map((n) => n.id)
+    );
+    const near = new Set(keep);
+    links.forEach((l) => {
+      if (keep.has(l.source)) near.add(l.target);
+      if (keep.has(l.target)) near.add(l.source);
+    });
+    return {
+      hidden: new Set(nodes.filter((n) => !near.has(n.id)).map((n) => n.id)),
+      context: new Set([...near].filter((id) => !keep.has(id))),
+      hits: keep.size,
+    };
   }, [nodes, links, filter]);
+  const { hidden, context } = search;
+
+  const stage = useRef<HTMLDivElement | null>(null);
+  const nodeEl = useRef<Record<string, HTMLButtonElement | null>>({});
+  const lineEl = useRef<(SVGLineElement | null)[]>([]);
+  const body = useRef<Record<string, Body>>({});
+  const alpha = useRef(1); // simulation "temperature" — decays to near-still
+  const drag = useRef<{ id: string; ox: number; oy: number; moved: boolean; lx: number; ly: number } | null>(null);
+  const suppressClick = useRef(false);
+  const hiddenRef = useRef(hidden);
+  const contextRef = useRef(context);
+
+  // Seed from the coordinates the graph has always used, so it opens looking
+  // exactly like the old static layout and then relaxes out of it.
+  if (Object.keys(body.current).length === 0) {
+    nodes.forEach((n) => {
+      body.current[n.id] = { x: n.x, y: n.y, vx: 0, vy: 0, w: 140, h: 56, fixed: false };
+    });
+  }
+
+  // Re-energise whenever the filter changes so the survivors visibly regroup.
+  useEffect(() => {
+    hiddenRef.current = hidden;
+    contextRef.current = context;
+    alpha.current = Math.max(alpha.current, 0.55);
+  }, [hidden, context]);
+
+  useEffect(() => {
+    const el = stage.current;
+    if (!el) return;
+
+    // Measure the real card size once — the repulsion radius depends on it.
+    nodes.forEach((n) => {
+      const e = nodeEl.current[n.id];
+      if (e) {
+        body.current[n.id].w = e.offsetWidth || 140;
+        body.current[n.id].h = e.offsetHeight || 56;
+      }
+    });
+
+    const paint = () => {
+      for (const n of nodes) {
+        const b = body.current[n.id];
+        const e = nodeEl.current[n.id];
+        if (!e) continue;
+        // Rounded: at rest the solver leaves a sub-pixel jitter, and fractional
+        // transforms make the card text shimmer as it re-rasterises.
+        e.style.transform = `translate(${Math.round(b.x - b.w / 2)}px, ${Math.round(b.y - b.h / 2)}px)`;
+        e.style.display = hiddenRef.current.has(n.id) ? "none" : "";
+        // Neighbours of a match are shown for context, but faded so it's obvious
+        // which cards actually matched what you typed.
+        e.style.opacity = contextRef.current.has(n.id) ? "0.4" : "";
+      }
+      links.forEach((l, i) => {
+        const ln = lineEl.current[i];
+        if (!ln) return;
+        const s = body.current[l.source];
+        const t = body.current[l.target];
+        ln.style.display =
+          hiddenRef.current.has(l.source) || hiddenRef.current.has(l.target) ? "none" : "";
+        ln.setAttribute("x1", String(s.x));
+        ln.setAttribute("y1", String(s.y));
+        ln.setAttribute("x2", String(t.x));
+        ln.setAttribute("y2", String(t.y));
+      });
+    };
+
+    const step = () => {
+      const W = el.clientWidth;
+      const H = el.clientHeight;
+      const a = alpha.current;
+      const live = nodes.filter((n) => !hiddenRef.current.has(n.id));
+
+      // Everything pushes everything else away, harder once cards actually overlap.
+      for (let i = 0; i < live.length; i++) {
+        const p = body.current[live[i].id];
+        for (let j = i + 1; j < live.length; j++) {
+          const q = body.current[live[j].id];
+          let dx = q.x - p.x;
+          let dy = q.y - p.y;
+          let d2 = dx * dx + dy * dy;
+          if (d2 < 4) {
+            dx = 1;
+            dy = 1;
+            d2 = 4;
+          }
+          const d = Math.sqrt(d2);
+          const want = Math.max(p.w, p.h) * 0.62 + Math.max(q.w, q.h) * 0.62;
+          const f = ((REP * a) / d2) * (d < want ? 2.2 : 1);
+          const fx = (dx / d) * f;
+          const fy = (dy / d) * f;
+          p.vx -= fx;
+          p.vy -= fy;
+          q.vx += fx;
+          q.vy += fy;
+        }
+      }
+
+      // Links behave like springs with a preferred length.
+      for (const l of links) {
+        if (hiddenRef.current.has(l.source) || hiddenRef.current.has(l.target)) continue;
+        const s = body.current[l.source];
+        const t = body.current[l.target];
+        const dx = t.x - s.x;
+        const dy = t.y - s.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const f = (d - LEN) * STR * a;
+        const fx = (dx / d) * f;
+        const fy = (dy / d) * f;
+        s.vx += fx;
+        s.vy += fy;
+        t.vx -= fx;
+        t.vy -= fy;
+      }
+
+      // Gravity toward the middle, squashed vertically because the stage is wide.
+      for (const n of live) {
+        const b = body.current[n.id];
+        b.vx -= (b.x - W / 2) * GRV * a;
+        b.vy -= (b.y - H / 2) * GRV * a * 1.5;
+      }
+
+      // Integrate, damp, and bounce softly off the edges.
+      for (const n of live) {
+        const b = body.current[n.id];
+        if (b.fixed) {
+          b.vx = 0;
+          b.vy = 0;
+          continue;
+        }
+        b.vx *= DAMP;
+        b.vy *= DAMP;
+        const sp = Math.hypot(b.vx, b.vy);
+        if (sp > VMAX) {
+          b.vx = (b.vx / sp) * VMAX;
+          b.vy = (b.vy / sp) * VMAX;
+        }
+        b.x += b.vx;
+        b.y += b.vy;
+        const mx = b.w / 2 + 6;
+        const my = b.h / 2 + 6;
+        if (b.x < mx) {
+          b.x = mx;
+          b.vx *= -0.4;
+        }
+        if (b.x > W - mx) {
+          b.x = W - mx;
+          b.vx *= -0.4;
+        }
+        if (b.y < my) {
+          b.y = my;
+          b.vy *= -0.4;
+        }
+        if (b.y > H - my) {
+          b.y = H - my;
+          b.vy *= -0.4;
+        }
+      }
+
+      // Soft repulsion alone isn't enough: two well-connected cards (AI / SLMs
+      // and Finance, say) have enough springs pulling them together to sit on
+      // top of each other at equilibrium. So finish each frame by hard-pushing
+      // any overlapping pair apart along whichever axis needs the least travel.
+      // A card being dragged doesn't move — it shoves the others instead.
+      for (let pass = 0; pass < 3; pass++) {
+        for (let i = 0; i < live.length; i++) {
+          const p = body.current[live[i].id];
+          for (let j = i + 1; j < live.length; j++) {
+            const q = body.current[live[j].id];
+            const ox = (p.w + q.w) / 2 + 10 - Math.abs(p.x - q.x);
+            const oy = (p.h + q.h) / 2 + 8 - Math.abs(p.y - q.y);
+            if (ox <= 0 || oy <= 0) continue;
+            const ps = p.fixed ? 0 : q.fixed ? 1 : 0.5;
+            const qs = q.fixed ? 0 : p.fixed ? 1 : 0.5;
+            if (ox < oy) {
+              const dir = p.x < q.x ? -1 : 1;
+              p.x += dir * ox * ps;
+              q.x -= dir * ox * qs;
+            } else {
+              const dir = p.y < q.y ? -1 : 1;
+              p.y += dir * oy * ps;
+              q.y -= dir * oy * qs;
+            }
+          }
+        }
+      }
+
+      alpha.current = Math.max(0.006, a * 0.988);
+    };
+
+    // Reduced motion: settle it off-screen so the page opens already at rest.
+    // The loop still runs, but at resting alpha nothing moves unless dragged.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      for (let i = 0; i < 400; i++) step();
+    }
+
+    let raf = 0;
+    const frame = () => {
+      step();
+      paint();
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [nodes, links]);
+
+  // Grab, drag, fling. Pointer events so it works the same with a finger.
+  const onDown = (id: string) => (e: React.PointerEvent<HTMLButtonElement>) => {
+    const b = body.current[id];
+    const r = stage.current!.getBoundingClientRect();
+    drag.current = {
+      id,
+      ox: e.clientX - r.left - b.x,
+      oy: e.clientY - r.top - b.y,
+      moved: false,
+      lx: b.x,
+      ly: b.y,
+    };
+    b.fixed = true;
+    alpha.current = 0.9;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const onMove = (id: string) => (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== id) return;
+    const b = body.current[id];
+    const r = stage.current!.getBoundingClientRect();
+    const nx = e.clientX - r.left - d.ox;
+    const ny = e.clientY - r.top - d.oy;
+    if (Math.abs(nx - b.x) + Math.abs(ny - b.y) > 2) d.moved = true;
+    d.lx = b.x;
+    d.ly = b.y;
+    b.x = nx;
+    b.y = ny;
+  };
+
+  const onUp = (id: string) => (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== id) return;
+    const b = body.current[id];
+    b.fixed = false;
+    // Hand the card the velocity it had in the last frame of the drag.
+    b.vx = (b.x - d.lx) * 0.9;
+    b.vy = (b.y - d.ly) * 0.9;
+    alpha.current = 0.9;
+    suppressClick.current = d.moved; // a drag shouldn't also count as a click
+    drag.current = null;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+  };
+
+  // Scatter everything and let it fall back together.
+  const shake = () => {
+    for (const n of nodes) {
+      const b = body.current[n.id];
+      b.vx += (Math.random() - 0.5) * 26;
+      b.vy += (Math.random() - 0.5) * 26;
+    }
+    alpha.current = 1;
+  };
+
+  const open = (n: GraphNode) => {
+    if (!n.to) return;
+    onNavigate(n.to.route, { project: n.to.project, category: n.to.category });
+  };
 
   return (
     <div className="space-y-3">
@@ -729,34 +1082,54 @@ function IdeaGraph() {
             onChange={(e) => setFilter(e.target.value)}
           />
         </div>
+        <button onClick={shake} className="text-sm text-zinc-600 underline shrink-0">Shake</button>
         {active && (
-          <button onClick={() => setActive(null)} className="text-sm text-zinc-600 underline">Clear selection</button>
+          <button onClick={() => setActive(null)} className="text-sm text-zinc-600 underline shrink-0">Clear selection</button>
         )}
       </div>
 
+      {filter.trim() && (
+        <div className="text-xs text-zinc-500">
+          {search.hits === 0 ? (
+            <>No nodes match “{filter.trim()}”. Try a project, a technique (esp32, ollama, bioacoustics), or a field.</>
+          ) : (
+            <>
+              {search.hits} match{search.hits === 1 ? "" : "es"}
+              {context.size > 0 && <> · {context.size} connected, shown faded</>}
+            </>
+          )}
+        </div>
+      )}
+
       <div className="h-[480px] rounded-3xl border border-zinc-200 overflow-x-auto overflow-y-hidden">
-        <div className="relative h-full min-w-[760px]">
+        <div className="relative h-full min-w-[760px]" ref={stage}>
         {/* links */}
         <svg className="absolute inset-0 w-full h-full">
-          {filtered.links.map((l, idx) => (
+          {links.map((l, idx) => (
             <line
               key={idx}
-              x1={filtered.nodes.find((n) => n.id === l.source)?.x}
-              y1={filtered.nodes.find((n) => n.id === l.source)?.y}
-              x2={filtered.nodes.find((n) => n.id === l.target)?.x}
-              y2={filtered.nodes.find((n) => n.id === l.target)?.y}
-              stroke="#e6e6e6"
+              ref={(e) => { lineEl.current[idx] = e; }}
+              stroke={active && (l.source === active || l.target === active) ? "#a1a1aa" : "#e6e6e6"}
               strokeWidth={2}
             />
           ))}
         </svg>
         {/* nodes */}
-        {filtered.nodes.map((n) => (
+        {nodes.map((n) => (
           <button
             key={n.id}
-            onClick={() => setActive(n.id)}
-            style={{ left: n.x - 70, top: n.y - 28 }}
-            className={`absolute w-[140px] rounded-2xl border px-3 py-2 text-left shadow-sm ${
+            ref={(e) => { nodeEl.current[n.id] = e; }}
+            onPointerDown={onDown(n.id)}
+            onPointerMove={onMove(n.id)}
+            onPointerUp={onUp(n.id)}
+            onPointerCancel={onUp(n.id)}
+            onClick={() => {
+              if (suppressClick.current) { suppressClick.current = false; return; }
+              setActive(n.id);
+            }}
+            onDoubleClick={() => open(n)}
+            style={{ left: 0, top: 0, touchAction: "none" }}
+            className={`absolute w-[140px] rounded-2xl border px-3 py-2 text-left shadow-sm select-none cursor-grab active:cursor-grabbing transition-opacity duration-200 ${
               active === n.id ? "border-zinc-900 bg-white" : "border-zinc-200 bg-white/80 backdrop-blur"
             }`}
           >
@@ -775,19 +1148,34 @@ function IdeaGraph() {
             exit={{ opacity: 0, y: -6 }}
             className="rounded-2xl border border-zinc-200 p-4"
           >
-            <ActiveCard id={active} />
+            <ActiveCard id={active} onSelect={setActive} onOpen={open} />
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="text-xs text-zinc-500">
       a simplified representation of my work and ideas. It’s not exhaustive, but I always find graphs help explain things.
+      Drag a node and the rest rearrange around it — everything's on springs. Click to select, double-click to jump to it on the site.
       </div>
     </div>
   );
 }
 
-function ActiveCard({ id }: { id: string }) {
+// Where each node lives on the rest of the site.
+const OPEN_LABEL: Record<string, string> = {
+  work: "Open in Projects + Research",
+  blog: "Open in Notes",
+};
+
+function ActiveCard({
+  id,
+  onSelect,
+  onOpen,
+}: {
+  id: string;
+  onSelect: (id: string) => void;
+  onOpen: (n: GraphNode) => void;
+}) {
   const { nodes, links } = useMemo(() => mockGraph(), []);
   const node = nodes.find((n) => n.id === id)!;
   const related = links
@@ -799,12 +1187,26 @@ function ActiveCard({ id }: { id: string }) {
       <div className="text-xs uppercase tracking-wide text-zinc-400">{node.kind}</div>
       <div className="font-medium">{node.label}</div>
       <p className="mt-1 text-sm text-zinc-600">{node.note}</p>
+      {node.to && (
+        <button
+          onClick={() => onOpen(node)}
+          className="mt-3 inline-flex items-center gap-1 text-sm text-zinc-900 underline"
+        >
+          {OPEN_LABEL[node.to.route] ?? "Open"} <ExternalLink className="size-3" />
+        </button>
+      )}
       {related.length > 0 && (
         <div className="mt-3">
           <div className="text-xs text-zinc-500 mb-1">Related</div>
           <div className="flex flex-wrap gap-2">
             {related.map((r) => (
-              <span key={r.id} className="rounded-xl border border-zinc-200 px-2 py-1 text-xs">{r.label}</span>
+              <button
+                key={r.id}
+                onClick={() => onSelect(r.id)}
+                className="rounded-xl border border-zinc-200 px-2 py-1 text-xs hover:border-zinc-400"
+              >
+                {r.label}
+              </button>
             ))}
           </div>
         </div>
@@ -813,29 +1215,46 @@ function ActiveCard({ id }: { id: string }) {
   );
 }
 
+// A node on the Idea Graph. `to` is where double-clicking it lands you: a
+// specific project modal, or the projects page pre-filtered to a category.
+export type GraphNode = {
+  id: string;
+  label: string;
+  kind: string;
+  x: number;
+  y: number;
+  note: string;
+  // Extra terms the search should match. The label alone is too narrow — nobody
+  // searching "ollama", "esp32" or "bioacoustics" would find anything otherwise.
+  keywords?: string;
+  to?: { route: string; project?: string; category?: string };
+};
+
 function mockGraph() {
-  const nodes = [
+  // `to.project` must match the WORK entry title exactly — that's what the
+  // deep-link lookup on the projects page compares against.
+  const nodes: GraphNode[] = [
     // Builds / products (top band)
-    { id: "fixate", label: "Fixate", kind: "Project", x: 110, y: 70, note: "Local-CV Chrome extension that verifies real focus time." },
-    { id: "whoomp", label: "whoomp", kind: "Project", x: 290, y: 70, note: "Local-first health app: reads biometrics over BLE, computes recovery on-device." },
-    { id: "kodo", label: "kōdō", kind: "Project", x: 470, y: 70, note: "Productivity dashboard driven by local SLMs." },
-    { id: "cryptoradar", label: "CryptoRadar", kind: "Project", x: 650, y: 70, note: "Crypto regulatory + market intelligence terminal." },
-    { id: "options", label: "Options Chain Analytics", kind: "Project", x: 110, y: 150, note: "Analytics for historical options chain data." },
-    { id: "tradingbot", label: "XRP Trading Bot", kind: "Project", x: 290, y: 150, note: "Algorithmic trading bot pairing signals with a local SLM." },
-    { id: "mochi", label: "Mochi desk robot", kind: "Project", x: 470, y: 150, note: "ESP32 desk companion running a small language model." },
-    { id: "cubesat", label: "CubeSat (Ukpik-1)", kind: "Project", x: 650, y: 150, note: "Radio ground station for the Ukpik-1 CubeSat." },
+    { id: "fixate", label: "Fixate", kind: "Project", x: 110, y: 70, note: "Local-CV Chrome extension that verifies real focus time.", keywords: "chrome extension mv3 computer vision gaze eye tracking focus local cv productivity blocking", to: { route: "work", project: "Fixate" } },
+    { id: "whoomp", label: "whoomp", kind: "Project", x: 290, y: 70, note: "Local-first health app: reads biometrics over BLE, computes recovery on-device.", keywords: "health wearable biometrics ble bluetooth low energy recovery sleep hrv strain whoop local-first reverse engineering", to: { route: "work", project: "whoomp" } },
+    { id: "kodo", label: "kōdō", kind: "Project", x: 470, y: 70, note: "Productivity dashboard driven by local SLMs.", keywords: "kodo productivity dashboard local slm ollama llm on-device agent", to: { route: "work", project: "kōdō" } },
+    { id: "cryptoradar", label: "CryptoRadar", kind: "Project", x: 650, y: 70, note: "Crypto regulatory + market intelligence terminal.", keywords: "crypto cryptocurrency regulation regulatory market intelligence terminal bitcoin news feed", to: { route: "work", project: "CryptoRadar" } },
+    { id: "options", label: "Options Chain Analytics", kind: "Project", x: 110, y: 150, note: "Analytics for historical options chain data.", keywords: "options chain volatility skew risk reversal derivatives greeks dash plotly analytics trading data viz", to: { route: "work", project: "Dash Options chain Platform" } },
+    { id: "tradingbot", label: "XRP Trading Bot", kind: "Project", x: 290, y: 150, note: "Algorithmic trading bot pairing signals with a local SLM.", keywords: "xrp ripple algo algorithmic trading bot crypto signals backtest slm", to: { route: "work", project: "XRP algo trading bot" } },
+    { id: "mochi", label: "Mochi desk robot", kind: "Project", x: 470, y: 150, note: "ESP32 desk companion running a small language model.", keywords: "esp32 embedded microcontroller desk robot companion slm hardware 3d printed", to: { route: "work", project: "Mochi desk robot" } },
+    { id: "cubesat", label: "CubeSat (Ukpik-1)", kind: "Project", x: 650, y: 150, note: "Radio ground station for the Ukpik-1 CubeSat.", keywords: "cubesat ukpik-1 satellite radio ground station rf telemetry space engineering", to: { route: "work", project: "CubeSat Satellite Project" } },
     // Research (middle band)
-    { id: "galaxy", label: "Galactic Mapping ML", kind: "Research", x: 200, y: 235, note: "ML classification for galactic components (JWST)." },
-    { id: "spectral", label: "Spectral Emission Study", kind: "Research", x: 400, y: 235, note: "PAH spectroscopy of NGC 2023 (Spitzer)." },
-    { id: "birds", label: "Bird Species Classification", kind: "Research", x: 600, y: 235, note: "Bioacoustics CNN for bird species ID." },
-    // Concepts
-    { id: "ml", label: "AI / SLMs", kind: "Concept", x: 140, y: 325, note: "Machine learning and small on-device language models." },
-    { id: "finance", label: "Finance", kind: "Concept", x: 320, y: 325, note: "Options, risk, crypto, analytics." },
-    { id: "astro", label: "Astronomy", kind: "Concept", x: 500, y: 325, note: "Galaxies, nebulae, mapping." },
-    { id: "engineering", label: "Engineering", kind: "Concept", x: 660, y: 325, note: "Embedded, satellites, radio, hardware." },
+    { id: "galaxy", label: "Galactic Mapping ML", kind: "Research", x: 200, y: 235, note: "ML classification for galactic components (JWST).", keywords: "galaxy galactic jwst machine learning ml cnn classification morphology dust lanes astronomy", to: { route: "work", project: "Galactic Mapping with Machine Learning" } },
+    { id: "spectral", label: "Spectral Emission Study", kind: "Research", x: 400, y: 235, note: "PAH spectroscopy of NGC 2023 (Spitzer).", keywords: "pah polycyclic aromatic hydrocarbon spectroscopy ngc 2023 spitzer nebula infrared spectra ionisation astronomy", to: { route: "work", project: "Multi-Module Spectral Analysis of PAH States" } },
+    { id: "birds", label: "Bird Species Classification", kind: "Research", x: 600, y: 235, note: "Bioacoustics CNN for bird species ID.", keywords: "bioacoustics bird audio spectrogram cnn machine learning ml classification sound", to: { route: "work", project: "Bird Species Classification Algorithm" } },
+    // Concepts — these open the projects page filtered to the matching category
+    { id: "ml", label: "AI / SLMs", kind: "Concept", x: 140, y: 325, note: "Machine learning and small on-device language models.", keywords: "ai ml machine learning slm llm small language model on-device local inference neural network", to: { route: "work", category: "ai" } },
+    { id: "finance", label: "Finance", kind: "Concept", x: 320, y: 325, note: "Options, risk, crypto, analytics.", keywords: "finance markets options risk crypto quant quantitative analytics trading", to: { route: "work", category: "finance" } },
+    { id: "astro", label: "Astronomy", kind: "Concept", x: 500, y: 325, note: "Galaxies, nebulae, mapping.", keywords: "astronomy astrophysics galaxies nebulae space telescope deep sky cosmology", to: { route: "work", category: "research" } },
+    { id: "engineering", label: "Engineering", kind: "Concept", x: 660, y: 325, note: "Embedded, satellites, radio, hardware.", keywords: "engineering embedded hardware electronics satellites radio firmware", to: { route: "work", category: "hardware" } },
     // Hobbies
-    { id: "trading", label: "Trading", kind: "Hobbies", x: 180, y: 410, note: "Algorithmic and discretionary trading strategies." },
-    { id: "astrophotography", label: "Astrophotography", kind: "Hobbies", x: 520, y: 410, note: "Capturing celestial objects with long exposures." },
+    { id: "trading", label: "Trading", kind: "Hobbies", x: 180, y: 410, note: "Algorithmic and discretionary trading strategies.", keywords: "trading algorithmic discretionary markets strategies portfolio", to: { route: "work", category: "finance" } },
+    { id: "astrophotography", label: "Astrophotography", kind: "Hobbies", x: 520, y: 410, note: "Capturing celestial objects with long exposures.", keywords: "astrophotography telescope seestar canon long exposure stacking deep sky imaging nebula galaxy", to: { route: "blog" } },
   ];
   const links = [
     { source: "fixate", target: "ml" },
@@ -1471,6 +1890,258 @@ function TaoistPhilosophyNote({ onBack }: { onBack: () => void }) {
 
 
 // =========================================================
+// Live site preview — a browser frame that loads the real deployment.
+//
+// Two things make this behave rather than look like a broken screenshot:
+//
+// 1. The dashboard is dense and desktop-shaped, so the frame renders at a full
+//    1440px and is scaled down to whatever width the modal gives it. Sizing the
+//    iframe to the card instead would trigger the mobile layout, which looks
+//    nothing like the thing being shown off.
+// 2. It doesn't autoload. Opening a project modal shouldn't fire a request to a
+//    third-party origin you never asked for — so the real load is one click
+//    away, and until then it's just a frame.
+//
+// If a deployment ever refuses to be framed (X-Frame-Options / CSP
+// frame-ancestors) the load event never arrives, so a timer falls back to an
+// "open in a new tab" prompt rather than leaving a dead white rectangle.
+// =========================================================
+const FRAME_W = 1440;
+const FRAME_H = 900;
+
+// CryptoRadar's public deployment.
+const CRYPTORADAR_URL = "https://cr-monitordash.vercel.app/";
+const GITHUB_URL = "https://github.com/RonakToprani";
+// The "in" glyph, shared by the contact page and the footer.
+const LINKEDIN_MARK =
+  "M4.98 3.5C4.98 4.88 3.87 6 2.5 6S.02 4.88.02 3.5C.02 2.12 1.13 1 2.5 1s2.48 1.12 2.48 2.5zM.25 8h4.5v12H.25V8zm7.5 0h4.31v1.64h.06c.6-1.14 2.07-2.34 4.26-2.34 4.56 0 5.4 3 5.4 6.9V20h-4.5v-5.5c0-1.31-.02-3-1.83-3-1.83 0-2.11 1.43-2.11 2.9V20h-4.5V8z";
+const FIXATE_REPO = "https://github.com/RonakToprani/fixate";
+
+function LivePreview({ url, title }: { url: string; title: string }) {
+  const host = useMemo(() => {
+    try {
+      return new URL(url).host;
+    } catch {
+      return url;
+    }
+  }, [url]);
+
+  const [live, setLive] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const box = useRef<HTMLDivElement | null>(null);
+  const [w, setW] = useState(0);
+
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    setW(el.clientWidth);
+    const ro = new ResizeObserver(([e]) => setW(e.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!live || ready) return;
+    const t = setTimeout(() => setBlocked(true), 8000);
+    return () => clearTimeout(t);
+  }, [live, ready]);
+
+  const scale = w ? w / FRAME_W : 0;
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 overflow-hidden bg-white">
+      {/* browser chrome */}
+      <div className="flex items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-3 py-2">
+        <div className="flex gap-1.5 shrink-0">
+          <span className="size-2.5 rounded-full bg-zinc-300" />
+          <span className="size-2.5 rounded-full bg-zinc-300" />
+          <span className="size-2.5 rounded-full bg-zinc-300" />
+        </div>
+        <div className="flex-1 truncate rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-center text-[11px] text-zinc-500">
+          {host}
+        </div>
+        {live && ready && (
+          <span className="flex shrink-0 items-center gap-1 text-[10px] text-zinc-500">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+            </span>
+            live
+          </span>
+        )}
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 text-zinc-400 hover:text-zinc-900 transition"
+          aria-label={`Open ${title} in a new tab`}
+        >
+          <ExternalLink className="size-3.5" />
+        </a>
+      </div>
+
+      <div
+        ref={box}
+        className="relative overflow-hidden bg-zinc-50"
+        style={{ height: scale ? FRAME_H * scale : 280 }}
+      >
+        {!live ? (
+          <button
+            onClick={() => setLive(true)}
+            className="group absolute inset-0 flex flex-col items-center justify-center gap-2"
+          >
+            <span className="rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 shadow-sm transition group-hover:border-zinc-500">
+              Load the live dashboard
+            </span>
+            <span className="text-xs text-zinc-500">the real deployment, running right here</span>
+          </button>
+        ) : blocked && !ready ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+            <p className="text-sm text-zinc-600">This deployment won’t load inside a frame.</p>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-white transition"
+            >
+              Open it in a new tab <ExternalLink className="size-3.5" />
+            </a>
+          </div>
+        ) : (
+          <>
+            {!ready && (
+              <div className="absolute inset-0 flex items-center justify-center text-xs text-zinc-500">
+                loading the dashboard…
+              </div>
+            )}
+            <iframe
+              src={url}
+              title={title}
+              onLoad={() => setReady(true)}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              className="absolute left-0 top-0 origin-top-left border-0"
+              style={{
+                width: FRAME_W,
+                height: FRAME_H,
+                transform: `scale(${scale})`,
+                opacity: ready ? 1 : 0,
+                transition: "opacity .35s ease",
+              }}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// =========================================================
+// Fixate session receipt.
+//
+// The whole argument for Fixate is that focus time is *attested* rather than
+// self-reported — so the most honest way to show it is the artefact itself:
+// one session, minute by minute, including the bits where attention wandered.
+// A screenshot of a dashboard wouldn't make that point; a receipt does.
+//
+// The session below is a worked example, not a recording of a real one.
+// =========================================================
+const RECEIPT = {
+  label: "Deep work",
+  from: "09:12",
+  to: "10:42",
+  // Alternating stretches of held vs. broken attention, in minutes.
+  segments: [
+    { kind: "on", min: 14 },
+    { kind: "off", min: 1 },
+    { kind: "on", min: 22 },
+    { kind: "off", min: 2 },
+    { kind: "on", min: 9 },
+    { kind: "off", min: 1 },
+    { kind: "on", min: 31 },
+    { kind: "off", min: 2 },
+    { kind: "on", min: 8 },
+  ],
+  blockedAt: [37, 60, 75], // minutes in, where a blocked site was attempted
+};
+
+function FixateReceipt() {
+  const total = RECEIPT.segments.reduce((s, x) => s + x.min, 0);
+  const held = RECEIPT.segments.filter((s) => s.kind === "on").reduce((s, x) => s + x.min, 0);
+  const longest = Math.max(...RECEIPT.segments.filter((s) => s.kind === "on").map((s) => s.min));
+  const lapses = RECEIPT.segments.filter((s) => s.kind === "off").length;
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="font-medium">{RECEIPT.label} — session receipt</div>
+        <div className="text-[11px] uppercase tracking-wide text-zinc-400">example</div>
+      </div>
+
+      {/* the session itself, minute by minute */}
+      <div className="relative mt-3">
+        <div className="flex h-7 w-full overflow-hidden rounded-lg">
+          {RECEIPT.segments.map((s, i) => (
+            <div
+              key={i}
+              style={{ width: `${(s.min / total) * 100}%` }}
+              title={`${s.min} min ${s.kind === "on" ? "focused" : "away"}`}
+              // Held attention is the solid, high-contrast one in both themes —
+              // it must never read as the empty part of the bar.
+              className={
+                s.kind === "on" ? "bg-zinc-900 dark:bg-zinc-100" : "bg-zinc-200 dark:bg-zinc-700"
+              }
+            />
+          ))}
+        </div>
+        {/* attempts to reach a blocked site, stamped on the timeline */}
+        {RECEIPT.blockedAt.map((m) => (
+          <div
+            key={m}
+            style={{ left: `${(m / total) * 100}%` }}
+            title={`blocked site attempted at ${m} min`}
+            className="absolute -top-1 h-9 w-px bg-amber-500"
+          />
+        ))}
+      </div>
+
+      <div className="mt-2 flex justify-between text-[11px] tabular-nums text-zinc-400">
+        <span>{RECEIPT.from}</span>
+        <span>{RECEIPT.to}</span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-y-2 sm:grid-cols-4">
+        {[
+          { v: `${held}m`, k: "attention held" },
+          { v: `${longest}m`, k: "longest stretch" },
+          { v: lapses, k: "look-aways" },
+          { v: RECEIPT.blockedAt.length, k: "sites blocked" },
+        ].map((s) => (
+          <div key={s.k}>
+            <div className="text-lg font-medium tabular-nums leading-none">{s.v}</div>
+            <div className="mt-0.5 text-[11px] text-zinc-500">{s.k}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-3 text-[11px] text-zinc-500">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-sm bg-zinc-900 dark:bg-zinc-100" /> focused
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-sm bg-zinc-200 dark:bg-zinc-700" /> looked away
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-3 w-px bg-amber-500" /> blocked site attempted
+        </span>
+        <span className="ml-auto">computed on-device · nothing uploaded</span>
+      </div>
+    </div>
+  );
+}
+
+// =========================================================
 // Projects + Research — single source of truth (shared with search)
 // =========================================================
 const WORK = [
@@ -1519,12 +2190,21 @@ const WORK = [
               </p>
             </div>
           </div>
+          <FixateReceipt />
           <ul className="list-disc pl-6 space-y-1 text-zinc-600 text-xs leading-relaxed">
             <li><b>Site blocking</b> via <code>declarativeNetRequest</code> for the session's duration</li>
             <li><b>Leaving-Chrome detection</b> through <code>windows.onFocusChanged</code></li>
             <li><b>Runs in the background</b> — a hidden document, live dashboard in the toolbar popout</li>
             <li><b>Verified history</b> — accumulates focus hours, clean streaks, and one pattern insight</li>
           </ul>
+          <a
+            href={FIXATE_REPO}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
+          >
+            <Github className="size-3.5" /> View on GitHub
+          </a>
         </div>
       ),
       clickable: true,
@@ -1725,6 +2405,9 @@ const WORK = [
             dates, and CBDC / stablecoin activity across the Americas. The dense, single-screen
             layout is inspired by real-time world-monitor dashboards.
           </p>
+
+          <LivePreview url={CRYPTORADAR_URL} title="CryptoRadar — live dashboard" />
+
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-zinc-200 p-3">
               <div className="font-medium mb-1">Market layer</div>
@@ -1747,6 +2430,14 @@ const WORK = [
             <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Recharts</span>
             <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Tailwind v4</span>
           </div>
+          <a
+            href={CRYPTORADAR_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
+          >
+            Open the live site <ExternalLink className="size-3.5" />
+          </a>
         </div>
       ),
       clickable: true,
@@ -2246,7 +2937,13 @@ function searchAll(q: string): SearchEntry[] {
     .map((r) => r.e);
 }
 
-function ProjectsResearch({ focusProject }: { focusProject?: string | null }) {
+function ProjectsResearch({
+  focusProject,
+  focusCategory,
+}: {
+  focusProject?: string | null;
+  focusCategory?: string | null;
+}) {
   const work = WORK;
 
   const [active, setActive] = useState<any | null>(null);
@@ -2258,6 +2955,11 @@ function ProjectsResearch({ focusProject }: { focusProject?: string | null }) {
     const w = work.find((x) => x!.title === focusProject);
     if (w && w.clickable) setActive(w);
   }, [focusProject, work]);
+
+  // Deep-link: a concept node on the Idea Graph lands here pre-filtered
+  useEffect(() => {
+    if (focusCategory) setCat(focusCategory);
+  }, [focusCategory]);
 
   // Close the project modal on Escape
   useEffect(() => {
@@ -2393,9 +3095,10 @@ function Contact() {
             title="Email"
             className="group"
           >
-            {/* Gmail SVG */}
+            {/* Gmail. The white backing plate this used to have was invisible on
+                a white page and a bright block on a dark one, so it's gone —
+                the red envelope reads correctly against both. */}
             <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
-              <rect width="48" height="48" rx="12" fill="#fff"/>
               <path d="M6 14v20c0 2.2 1.8 4 4 4h28c2.2 0 4-1.8 4-4V14c0-2.2-1.8-4-4-4H10c-2.2 0-4 1.8-4 4zm36 0l-18 13L6 14" stroke="#EA4335" strokeWidth="2"/>
             </svg>
           </a>
@@ -2406,14 +3109,12 @@ function Contact() {
             title="Twitter"
             className="group"
           >
-            {/* Twitter SVG */}
-            <img
-              src="/xlogo.avif"
-              alt="X Logo"
-              width={32}
-              height={32}
-              className="border-zinc-200"
-            />
+            {/* X mark, drawn rather than the flat black xlogo.avif — as an image
+                it was a black-on-black square in dark mode, and inverting a
+                bitmap is a guess. currentColor just follows the theme. */}
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" aria-label="X" role="img">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
           </a>
           <a
             href="https://linkedin.com/in/ronaktoprani"
@@ -2422,14 +3123,22 @@ function Contact() {
             title="LinkedIn"
             className="group"
           >
-            {/* LinkedIn SVG */}
-            <img
-              src="/linkedin.png"
-              alt="LinkedIn Logo"
-              width={32}
-              height={32}
-              className=" border-zinc-200"
-            />
+            {/* LinkedIn, same story as above — the PNG was black-on-transparent */}
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" aria-label="LinkedIn" role="img">
+              <path d={LINKEDIN_MARK} />
+            </svg>
+          </a>
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="GitHub"
+            className="group"
+          >
+            {/* GitHub mark — drawn rather than an image so it follows the theme */}
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.02 11.02 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.8 1.18 1.83 1.18 3.09 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14 0 1.55-.01 2.79-.01 3.17 0 .31.21.68.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z" />
+            </svg>
           </a>
         </div>
 
@@ -2485,13 +3194,17 @@ function Footer() {
       platform: "LinkedIn",
       url: "https://linkedin.com/in/ronaktoprani",
       icon: (
-        <img
-          src="/linkedin.png"
-          alt="LinkedIn"
+        // linkedin.png is a solid-black mark with alpha, so it disappeared
+        // entirely against a dark background. Drawn instead, in currentColor.
+        <svg
           width={18}
           height={18}
+          viewBox="0 0 24 24"
+          fill="currentColor"
           className="opacity-70 group-hover:opacity-100 transition-opacity duration-200"
-        />
+        >
+          <path d={LINKEDIN_MARK} />
+        </svg>
       ),
     },
     {
