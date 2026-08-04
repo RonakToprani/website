@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idea Graph — chronological transfer map</title>
+<style>
+:root{--page:#FCFCFC;--surface:#fff;--ink:#18181B;--muted:#71717A;--faint:#A1A1AA;--border:#E7E7EA;--border2:#D9D9DE;--line:#D4D4D8;--grid:#EFEFF1}
+@media(prefers-color-scheme:dark){:root{--page:#0A0A0B;--surface:#121214;--ink:#EDEDF0;--muted:#8F8F99;--faint:#68686F;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);--line:#3F3F46;--grid:rgba(255,255,255,.05)}}
+*{box-sizing:border-box}
+body{margin:0;padding:44px 24px 80px;background:var(--page);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;display:flex;justify-content:center}
+.wrap{max-width:1180px;width:100%}
+h1{font-size:24px;font-weight:600;letter-spacing:-.028em;margin:0 0 6px}
+.sub{color:var(--muted);margin:0 0 18px;font-size:14px;max-width:760px}
+.warn{border:1px solid var(--border2);border-radius:12px;padding:11px 14px;font-size:13px;color:var(--muted);
+  background:var(--surface);margin:0 0 22px;line-height:1.55}
+.warn b{color:var(--ink);font-weight:600}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:18px;margin-bottom:14px;font-size:13px;color:var(--muted)}
+.bar label{display:flex;align-items:center;gap:9px}
+input[type=range]{width:210px;accent-color:var(--ink)}
+.yr{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600;min-width:34px}
+.chk{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
+.stage{position:relative;border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:hidden}
+svg{display:block;width:100%;height:auto}
+.claim{font-size:12.5px;fill:var(--ink);font-weight:600}
+.claimsub{font-size:11px;fill:var(--faint);letter-spacing:.04em;text-transform:uppercase}
+.nodelabel{font-size:11.5px;fill:var(--ink)}
+.tick{font-size:11px;fill:var(--faint);font-variant-numeric:tabular-nums}
+.node,.edge{transition:opacity .18s ease}
+.dim{opacity:.13}
+.edge{fill:none;stroke:var(--line);stroke-width:1.4}
+.edge.untried{stroke-dasharray:3 4;stroke:var(--faint);opacity:.55}
+.edge.hot{stroke:var(--ink);stroke-width:2.1}
+.hit{fill:none;stroke:transparent;stroke-width:14;cursor:pointer}
+.dot{cursor:pointer}
+.tip{position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-118%);
+  background:var(--ink);color:var(--page);font-size:12.5px;line-height:1.5;padding:8px 11px;border-radius:9px;
+  max-width:280px;transition:opacity .13s ease;z-index:5}
+.legend{display:flex;flex-wrap:wrap;gap:18px;margin-top:14px;font-size:12.5px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:22px;height:0;border-top:1.4px solid var(--line);vertical-align:middle;margin-right:7px}
+.legend i.d{border-top-style:dashed;border-color:var(--faint)}
+.note{margin-top:30px;padding-top:18px;border-top:1px solid var(--border);font-size:13px;color:var(--faint);line-height:1.7;max-width:820px}
+a{color:inherit}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Idea Graph — chronological transfer map</h1>
+  <p class="sub">Time runs left to right. Each lane is a conviction, not a category. Every line is one technique moving from where you learned it to where you reused it — hover a line to read the transfer.</p>
+
+  <div class="warn">
+    <b>Mockup — the data is invented.</b> Every date and every connecting line here is a plausible guess I made to show the shape of the idea. The lane claims are my words, not yours. Nothing in this file should ship until you replace it with what actually happened.
+  </div>
+
+  <div class="bar">
+    <label>Grow to <span class="yr" id="yr">2026</span><input type="range" id="time" min="2022" max="2026" step="0.1" value="2026"></label>
+    <label class="chk"><input type="checkbox" id="untried"> Show combinations not tried yet</label>
+  </div>
+
+  <div class="stage" id="stage">
+    <svg id="svg" viewBox="0 0 1160 610" role="img" aria-label="Chronological map of techniques transferring between projects"></svg>
+    <div class="tip" id="tip"></div>
+  </div>
+
+  <div class="legend">
+    <span><i></i>technique reused</span>
+    <span><i class="d"></i>not tried yet</span>
+    <span>dot colour = lane</span>
+  </div>
+
+  <div class="note">
+    Why this beats the current graph: today's edges mean “these are both about astronomy,” which a visitor already knew from the Projects page. These edges mean “this is where that came from,” which is the one thing a graph can say that a list cannot. Read left to right it stops being a sitemap and becomes a trajectory.
+  </div>
+</div>
+
+<script>
+// ---- Illustrative data. All dates and all edges are placeholders. ----
+const LANES = [
+  {id:'noise',    claim:'“The signal is buried in the noise — the work is extraction”', kind:'Research',  c:'#6366F1'},
+  {id:'device',   claim:'“Models belong on the device that already holds your data”',   kind:'Software',  c:'#0EA5E9'},
+  {id:'markets',  claim:'“Markets are a data problem before they’re a money problem”',  kind:'Finance',   c:'#F59E0B'},
+  {id:'hardware', claim:'“Hardware keeps software honest”',                             kind:'Hardware',  c:'#10B981'},
+];
+
+const NODES = [
+  {id:'pah',     lane:'noise',    t:2022.3, label:'PAH spectroscopy (Spitzer)'},
+  {id:'birds',   lane:'noise',    t:2023.1, label:'Bird species CNN'},
+  {id:'galaxy',  lane:'noise',    t:2023.8, label:'Galaxy mapping ML (JWST)'},
+  {id:'astro',   lane:'noise',    t:2024.5, label:'Astrophotography'},
+  {id:'fixate',  lane:'device',   t:2024.8, label:'Fixate'},
+  {id:'kodo',    lane:'device',   t:2025.2, label:'kōdō'},
+  {id:'whoomp',  lane:'device',   t:2025.7, label:'whoomp'},
+  {id:'options', lane:'markets',  t:2023.5, label:'Options chain analytics'},
+  {id:'xrp',     lane:'markets',  t:2024.5, label:'XRP algo bot'},
+  {id:'radar',   lane:'markets',  t:2025.3, label:'CryptoRadar'},
+  {id:'cubesat', lane:'hardware', t:2022.8, label:'CubeSat (Ukpik-1)'},
+  {id:'mochi',   lane:'hardware', t:2025.9, label:'Mochi desk robot'},
+];
+
+const EDGES = [
+  {a:'pah',    b:'birds',  why:'Pulling a feature off a spectrum → pulling one off a spectrogram. Same maths, different axis.'},
+  {a:'birds',  b:'galaxy', why:'CNN classification where the label is faint and the background dominates.'},
+  {a:'galaxy', b:'astro',  why:'Learned what a real dust lane looks like in data, then went outside and photographed one.'},
+  {a:'astro',  b:'whoomp', why:'Stack many noisy frames to recover one clean signal → the same trick on noisy BLE biometrics.'},
+  {a:'galaxy', b:'fixate', why:'A vision model small and cheap enough to run locally, continuously, on a laptop.'},
+  {a:'fixate', b:'kodo',   why:'The local-first inference loop, reused wholesale.'},
+  {a:'kodo',   b:'mochi',  why:'A local SLM squeezed onto hardware with a fraction of the memory.'},
+  {a:'cubesat',b:'whoomp', why:'Decoding an undocumented radio protocol → reverse-engineering an undocumented BLE one.'},
+  {a:'options',b:'xrp',    why:'The same volatility machinery pointed at a different asset class.'},
+  {a:'xrp',    b:'radar',  why:'Signals needed context, so the bot grew a regulatory feed.'},
+];
+
+const UNTRIED = [
+  {a:'birds', b:'mochi', why:'Bioacoustics on the desk robot — it already has a microphone and an SLM.'},
+  {a:'radar', b:'kodo',  why:'Market intelligence as a kōdō surface rather than its own terminal.'},
+];
+
+// ---- Layout ----
+const W=1160, H=610, L=268, R=1104, T0=2021.9, T1=2026.4;
+const laneY = i => 92 + i*128;
+const x = t => L + (t-T0)/(T1-T0)*(R-L);
+const byId = Object.fromEntries(NODES.map(n=>[n.id,n]));
+NODES.forEach(n=>{ const i=LANES.findIndex(l=>l.id===n.lane); n.x=x(n.t); n.y=laneY(i); n.c=LANES[i].c; });
+
+const svg=document.getElementById('svg'), tip=document.getElementById('tip'), stage=document.getElementById('stage');
+const el=(t,a)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+// year gridlines
+for(let y=2022;y<=2026;y++){
+  svg.appendChild(el('line',{x1:x(y),y1:44,x2:x(y),y2:H-52,stroke:'var(--grid)','stroke-width':1}));
+  const tx=el('text',{x:x(y),y:H-32,'text-anchor':'middle',class:'tick'}); tx.textContent=y; svg.appendChild(tx);
+}
+// lane labels
+LANES.forEach((l,i)=>{
+  const k=el('text',{x:24,y:laneY(i)-13,class:'claimsub'}); k.textContent=l.kind; svg.appendChild(k);
+  const c=el('text',{x:24,y:laneY(i)+7,class:'claim'});
+  // wrap the claim to two lines at ~30 chars
+  const words=l.claim.split(' '); let line='',lines=[];
+  words.forEach(w=>{ if((line+w).length>29){lines.push(line.trim());line=w+' ';} else line+=w+' '; });
+  lines.push(line.trim());
+  lines.slice(0,2).forEach((s,j)=>{ const ts=el('tspan',{x:24,dy:j?14:0}); ts.textContent=s; c.appendChild(ts); });
+  svg.appendChild(c);
+  svg.appendChild(el('line',{x1:L-26,y1:laneY(i),x2:R,y2:laneY(i),stroke:'var(--grid)','stroke-width':1}));
+});
+
+const gEdges=el('g',{}), gNodes=el('g',{});
+svg.appendChild(gEdges); svg.appendChild(gNodes);
+
+function path(a,b){
+  const dx=Math.max(40,(b.x-a.x)*0.42);
+  return `M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`;
+}
+const drawn=[];
+[...EDGES.map(e=>({...e,untried:false})),...UNTRIED.map(e=>({...e,untried:true}))].forEach(e=>{
+  const a=byId[e.a],b=byId[e.b],d=path(a,b);
+  const p=el('path',{d,class:'edge'+(e.untried?' untried':'')});
+  const hit=el('path',{d,class:'hit'});
+  gEdges.appendChild(p); gEdges.appendChild(hit);
+  drawn.push({...e,p,hit,a,b});
+  hit.addEventListener('mousemove',ev=>{
+    p.classList.add('hot');
+    const r=stage.getBoundingClientRect();
+    tip.style.left=(ev.clientX-r.left)+'px'; tip.style.top=(ev.clientY-r.top)+'px';
+    tip.style.opacity=1;
+    tip.innerHTML=(e.untried?'<b>Not tried yet.</b> ':'')+e.why;
+  });
+  hit.addEventListener('mouseleave',()=>{p.classList.remove('hot');tip.style.opacity=0;});
+});
+
+const nodeEls={};
+NODES.forEach(n=>{
+  const g=el('g',{class:'node'});
+  const ring=el('circle',{cx:n.x,cy:n.y,r:11,fill:'var(--surface)',stroke:n.c,'stroke-width':0,opacity:.16});
+  const dot=el('circle',{cx:n.x,cy:n.y,r:5.5,fill:n.c,class:'dot'});
+  const lab=el('text',{x:n.x,y:n.y-17,'text-anchor':'middle',class:'nodelabel'}); lab.textContent=n.label;
+  g.appendChild(ring); g.appendChild(dot); g.appendChild(lab);
+  gNodes.appendChild(g); nodeEls[n.id]={g,dot,ring};
+  dot.addEventListener('mouseenter',()=>focus(n.id));
+  dot.addEventListener('mouseleave',()=>focus(null));
+});
+
+// hovering a node isolates its lineage — what fed it and what it fed
+function focus(id){
+  if(!id){
+    Object.values(nodeEls).forEach(o=>o.g.classList.remove('dim'));
+    drawn.forEach(e=>{e.p.classList.remove('dim');e.p.classList.remove('hot');});
+    return;
+  }
+  const keep=new Set([id]);
+  drawn.forEach(e=>{ if(e.a.id===id||e.b.id===id){keep.add(e.a.id);keep.add(e.b.id);} });
+  Object.entries(nodeEls).forEach(([k,o])=>o.g.classList.toggle('dim',!keep.has(k)));
+  drawn.forEach(e=>{
+    const on=e.a.id===id||e.b.id===id;
+    e.p.classList.toggle('dim',!on); e.p.classList.toggle('hot',on);
+  });
+}
+
+// time scrub — nodes and their edges appear as the work happens
+const slider=document.getElementById('time'), yr=document.getElementById('yr'), unt=document.getElementById('untried');
+function apply(){
+  const t=parseFloat(slider.value); yr.textContent=Math.floor(t);
+  NODES.forEach(n=>{ nodeEls[n.id].g.style.display = n.t<=t ? '' : 'none'; });
+  drawn.forEach(e=>{
+    const vis=e.a.t<=t && e.b.t<=t && (!e.untried || unt.checked);
+    e.p.style.display=vis?'':'none'; e.hit.style.display=vis?'':'none';
+  });
+}
+slider.addEventListener('input',apply); unt.addEventListener('change',apply); apply();
+</script>
+</body>
+</html>
