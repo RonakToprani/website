@@ -2159,6 +2159,23 @@ const WORK = [
             a chosen set of distracting sites, and flags when the browser loses focus. Each session
             produces an attributed, verifiable record of focus time rather than a self-reported one.
           </p>
+          <figure className="space-y-1.5">
+            <div className="rounded-xl border border-zinc-200 overflow-hidden bg-black">
+              <video
+                src="/Fixate.mp4"
+                controls
+                loop
+                muted
+                autoPlay
+                playsInline
+                preload="metadata"
+                className="w-full block"
+              />
+            </div>
+            <figcaption className="text-xs text-zinc-500">
+              Demo — Fixate running a full focus session, start to finish.
+            </figcaption>
+          </figure>
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-xl border border-zinc-200 p-3">
               <div className="font-medium mb-1">Trustworthy gaze detection</div>
