@@ -20,10 +20,9 @@
   # that on existing sites, which fails the build outright.
   NODE_VERSION = "22"
 
-# The app does its own routing in component state rather than through the URL,
-# so there is only ever one real document — but this keeps a direct hit on any
-# path serving the app instead of Netlify's 404 page.
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Deliberately no SPA catch-all. The usual `/* -> /index.html 200` rule exists
+# to make client-side *URL* routes work, and this app has none — it routes in
+# component state, so "/" is the only real document. With the catch-all in
+# place every missing file answered 200 with the app's HTML instead of 404,
+# which silently hides broken asset links (a renamed video still "works" until
+# someone notices the page is being served in its place).
