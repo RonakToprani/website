@@ -401,7 +401,7 @@ function Hero(){
           <span className="font-medium">Fixate</span> — a Chrome extension that <em>verifies</em> focus with local, on-device gaze detection. No backend, no data leaves the machine.
         </BlockCard>
         <BlockCard title="Also Shipping" icon={<GitBranch className="size-4" />}>
-          <span className="font-medium">whoomp</span> (a local-first health app that reads biometrics on-device) and <span className="font-medium">kōdō</span> (a productivity dashboard run by local SLMs).
+          <span className="font-medium">Kadence</span> (a local-first health app that reads biometrics on-device) and <span className="font-medium">kōdō</span> (a productivity dashboard run by local SLMs).
         </BlockCard>
         <BlockCard title="Recent Note" icon={<BookText className="size-4" />}>
           New astrophotography — the C27 Crescent Nebula, M27 Dumbbell, and more, over in the Notes section.
@@ -1236,7 +1236,7 @@ function mockGraph() {
   const nodes: GraphNode[] = [
     // Builds / products (top band)
     { id: "fixate", label: "Fixate", kind: "Project", x: 110, y: 70, note: "Local-CV Chrome extension that verifies real focus time.", keywords: "chrome extension mv3 computer vision gaze eye tracking focus local cv productivity blocking", to: { route: "work", project: "Fixate" } },
-    { id: "whoomp", label: "whoomp", kind: "Project", x: 290, y: 70, note: "Local-first health app: reads biometrics over BLE, computes recovery on-device.", keywords: "health wearable biometrics ble bluetooth low energy recovery sleep hrv strain whoop local-first reverse engineering", to: { route: "work", project: "whoomp" } },
+    { id: "kadence", label: "Kadence", kind: "Project", x: 290, y: 70, note: "Local-first health app: reads biometrics over BLE, computes recovery on-device.", keywords: "health wearable biometrics ble bluetooth low energy recovery sleep hrv strain whoop whoomp local-first reverse engineering", to: { route: "work", project: "Kadence" } },
     { id: "kodo", label: "kōdō", kind: "Project", x: 470, y: 70, note: "Productivity dashboard driven by local SLMs.", keywords: "kodo productivity dashboard local slm ollama llm on-device agent", to: { route: "work", project: "kōdō" } },
     { id: "cryptoradar", label: "CryptoRadar", kind: "Project", x: 650, y: 70, note: "Crypto regulatory + market intelligence terminal.", keywords: "crypto cryptocurrency regulation regulatory market intelligence terminal bitcoin news feed", to: { route: "work", project: "CryptoRadar" } },
     { id: "options", label: "Options Chain Analytics", kind: "Project", x: 110, y: 150, note: "Analytics for historical options chain data.", keywords: "options chain volatility skew risk reversal derivatives greeks dash plotly analytics trading data viz", to: { route: "work", project: "Dash Options chain Platform" } },
@@ -1258,8 +1258,8 @@ function mockGraph() {
   ];
   const links = [
     { source: "fixate", target: "ml" },
-    { source: "whoomp", target: "engineering" },
-    { source: "whoomp", target: "ml" },
+    { source: "kadence", target: "engineering" },
+    { source: "kadence", target: "ml" },
     { source: "kodo", target: "ml" },
     { source: "cryptoradar", target: "finance" },
     { source: "mochi", target: "engineering" },
@@ -1303,7 +1303,7 @@ function CommandPalette({
     const featured = SEARCH_INDEX.filter((e) =>
       [
         "Fixate",
-        "whoomp",
+        "Kadence",
         "M101 (Pinwheel Galaxy)",
       ].includes(e.title)
     );
@@ -2227,7 +2227,7 @@ const WORK = [
       clickable: true,
     },
     {
-      title: "whoomp",
+      title: "Kadence",
       venue: "On-device health app · iOS",
       tags: ["local-first", "on-device", "bluetooth le", "react native"],
       desc:
@@ -2235,7 +2235,7 @@ const WORK = [
       details: (
         <div className="space-y-4 text-sm max-w-3xl mx-auto">
           <p className="text-zinc-700 leading-relaxed">
-            whoomp connects to a wearable over Bluetooth LE, decodes its raw sensor stream, and
+            Kadence connects to a wearable over Bluetooth LE, decodes its raw sensor stream, and
             runs the HRV / recovery / strain pipeline directly on the phone. There is no backend
             service — biometric data is captured, processed, and stored entirely on-device. The
             harder parts were on the signal side: reading and framing the BLE data correctly, then
@@ -2244,7 +2244,7 @@ const WORK = [
           <figure className="space-y-1.5">
             <div className="rounded-2xl border border-zinc-200 overflow-hidden bg-black mx-auto w-full max-w-[260px]">
               <video
-                src="/whoomp.mp4"
+                src="/kadence.mp4"
                 controls
                 loop
                 muted
@@ -2291,8 +2291,8 @@ const WORK = [
               </div>
               <div>
                 <img
-                  src="/whoompstress.jpg"
-                  alt="whoomp stress-through-the-day methodology"
+                  src="/kadence-stress.jpg"
+                  alt="Kadence stress-through-the-day methodology"
                   className="rounded-lg border border-zinc-200 w-full max-w-[220px] mx-auto"
                 />
               </div>
@@ -2319,8 +2319,8 @@ const WORK = [
               </div>
               <div>
                 <img
-                  src="/whoompsleep.jpg"
-                  alt="whoomp sleep staging and sleep-need methodology"
+                  src="/kadence-sleep.jpg"
+                  alt="Kadence sleep staging and sleep-need methodology"
                   className="rounded-lg border border-zinc-200 w-full max-w-[170px] mx-auto"
                 />
               </div>
