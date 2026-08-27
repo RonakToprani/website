@@ -34,6 +34,58 @@
 }
 
 /* =========================================================
+   Entry animation — stage two.
+   After the panel wipes away (see src/Intro.tsx), the workspace assembles:
+   header, sidebar and page card rise into place 40ms apart, which is the
+   interval where a stagger starts reading as deliberate rather than as lag.
+   Driven by a class on the root so the markup only carries a data attribute.
+   ========================================================= */
+@keyframes intro-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes intro-slide-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-8px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.intro-assemble [data-intro] {
+  opacity: 0;
+  animation: intro-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.intro-assemble [data-intro="header"] {
+  animation-delay: 450ms;
+}
+.intro-assemble [data-intro="sidebar"] {
+  animation-name: intro-slide-in;
+  animation-delay: 485ms;
+}
+.intro-assemble [data-intro="page"] {
+  animation-delay: 520ms;
+}
+
+/* Anyone who asked for less motion never sees any of this. */
+@media (prefers-reduced-motion: reduce) {
+  .intro-assemble [data-intro] {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+/* =========================================================
    Dark mode
    The app's palette is almost entirely zinc + white, so rather than
    adding a dark: variant to several hundred classNames, the handful

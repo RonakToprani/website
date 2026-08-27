@@ -14,6 +14,7 @@ import {
   Github,
   Telescope,
 } from "lucide-react";
+import { IntroOverlay, shouldPlayIntro } from "./Intro";
 import {
   SITE,
   clockTime,
@@ -164,6 +165,9 @@ export type FocusTarget = { astro?: string; project?: string; category?: string 
 export default function Portfolio() {
   const [route, setRoute] = useState("home");
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // Entry animation. Resolved once, lazily, so a reduced-motion visitor or
+  // anyone returning this session never mounts the overlay at all.
+  const [playIntro, setPlayIntro] = useState(shouldPlayIntro);
   // Deep-link target set by the universal search (e.g. open a galaxy or a project)
   const [focus, setFocus] = useState<FocusTarget | null>(null);
 
@@ -189,13 +193,16 @@ export default function Portfolio() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white text-zinc-900">
-      <Header onOpenPalette={() => setPaletteOpen(true)} />
+    <div className={`min-h-screen bg-white text-zinc-900${playIntro ? " intro-assemble" : ""}`}>
+      {playIntro && <IntroOverlay onDone={() => setPlayIntro(false)} />}
+      <div data-intro="header">
+        <Header onOpenPalette={() => setPaletteOpen(true)} />
+      </div>
       <div className="mx-auto max-w-7xl grid grid-cols-12 gap-4 px-4 md:px-6 py-6">
-        <aside className="col-span-12 md:col-span-3 lg:col-span-2 top-4 h-fit">
+        <aside data-intro="sidebar" className="col-span-12 md:col-span-3 lg:col-span-2 top-4 h-fit">
           <Sidebar route={route} setRoute={(r) => go(r)} />
         </aside>
-        <main className="col-span-12 md:col-span-9 lg:col-span-10">
+        <main data-intro="page" className="col-span-12 md:col-span-9 lg:col-span-10">
           <NotionSurface>
             <AnimatePresence mode="wait">
               {route === "home" && (
