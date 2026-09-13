@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useLayoutEffect, useRef } from "react";
 import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import {
   Home,
@@ -181,7 +181,6 @@ export default function Portfolio() {
     setRoute(to);
     setFocus(f ?? null);
     setNav((n) => n + 1);
-    window.scrollTo({ top: 0 });
   };
 
   // keyboard: ⌘K / Ctrl-K / "/" toggles the command palette
@@ -381,15 +380,42 @@ function NotionSurface({ children }: { children: React.ReactNode }) {
   );
 }
 
-// One ease-out curve for every enter animation: fast start, soft landing, no overshoot.
-const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
+// Shared motion language. Enters decelerate gently (ease-out quint) and start ~40ms after
+// mount, so the frame that mounts a heavy page or modal has finished before anything moves —
+// otherwise the first frames arrive late, the tween jumps ahead to catch up, and it lurches.
+// Exits are short and accelerate away.
+const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
+const EASE_IN: [number, number, number, number] = [0.4, 0, 1, 1];
+const ENTER_DELAY = 0.04;
+// Critically damped: settles in ~0.45s with no visible overshoot.
+const SOFT_SPRING = { type: "spring", stiffness: 300, damping: 32, mass: 0.9 } as const;
+// framer-motion hands opacity/transform tweens to the browser's Web Animations API. When one
+// finishes, it cancels the animation and writes the final value in separate steps, so for a
+// frame the element shows its *starting* value: a flash at the end of every fade, and the old
+// page reappearing at full opacity after its exit. An onUpdate handler makes framer run the
+// animation on its own frame loop instead, where the final value lands in the same frame.
+const NO_WAAPI = { onUpdate: () => {} };
 
 function Page({ title, subtitle, children }: { title?: string; subtitle?: string; children: React.ReactNode }) {
+  // Jump to the top as the new page mounts — it's still at opacity 0 — rather than while the
+  // old page is fading out, which made the outgoing page visibly snap.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <motion.section
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0, transition: { duration: 0.18, ease: EASE_OUT } }}
-      exit={{ opacity: 0, transition: { duration: 0.08 } }}
+      {...NO_WAAPI}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        transition: {
+          opacity: { duration: 0.3, ease: "easeOut", delay: ENTER_DELAY },
+          y: { duration: 0.45, ease: EASE_OUT, delay: ENTER_DELAY },
+        },
+      }}
+      exit={{ opacity: 0, transition: { duration: 0.15, ease: EASE_IN } }}
       className="space-y-8"
     >
       {title && (
@@ -1207,6 +1233,7 @@ function IdeaGraph({ onNavigate }: { onNavigate: (to: string, f?: FocusTarget) =
       <AnimatePresence>
         {active && (
           <motion.div
+            {...NO_WAAPI}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
@@ -1418,16 +1445,27 @@ function CommandPalette({
   return (
     <div className="fixed inset-0 z-50" data-palette>
       <motion.div
+        {...NO_WAAPI}
         className="absolute inset-0 bg-black/30"
         onClick={onClose}
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1, transition: { duration: 0.12 } }}
-        exit={{ opacity: 0, transition: { duration: 0.1 } }}
+        animate={{ opacity: 1, transition: { duration: 0.2, ease: "easeOut" } }}
+        exit={{ opacity: 0, transition: { duration: 0.15, ease: "easeIn" } }}
       />
       <motion.div
-        initial={{ opacity: 0, y: 8, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.16, ease: EASE_OUT } }}
-        exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.1 } }}
+        {...NO_WAAPI}
+        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+        animate={{
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          transition: {
+            opacity: { duration: 0.2, ease: "easeOut" },
+            y: SOFT_SPRING,
+            scale: SOFT_SPRING,
+          },
+        }}
+        exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.14, ease: EASE_IN } }}
         className="relative mx-auto mt-24 w-full max-w-xl rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl"
       >
         <div className="flex items-center gap-2 border-b border-zinc-200 px-2 pb-2">
@@ -1514,21 +1552,10 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
     }
   }, [focusAstro, astroPhotos]);
 
-  // Warm the cache for every frame of the object being viewed, so Prev/Next is instant.
-  const galleryObj = gallery?.objIdx;
-  useEffect(() => {
-    if (galleryObj === undefined) return;
-    astroPhotos[galleryObj].files.forEach((f) => {
-      new Image().src = `/${f}`;
-    });
-  }, [galleryObj, astroPhotos]);
-
   // Keyboard nav for the lightbox
   useEffect(() => {
     if (!gallery) return;
     const onKey = (e: KeyboardEvent) => {
-      // the ⌘K palette on top owns the keyboard while it's open
-      if (document.querySelector("[data-palette]")) return;
       if (e.key === "Escape") setGallery(null);
       if (e.key === "ArrowRight")
         setGallery((g) =>
@@ -1582,15 +1609,10 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
                     onClick={() => setGallery({ objIdx, imgIdx })}
                     className="focus:outline-none"
                   >
-                    {/* 256px centre-crop thumbnails live in public/thumbs (regenerate when adding photos) */}
                     <img
-                      src={`/thumbs/${file.replace(/\.[^.]+$/, ".jpg")}`}
+                      src={`/${file}`}
                       alt={obj.name}
-                      width={128}
-                      height={128}
-                      loading="lazy"
-                      decoding="async"
-                      className="rounded-lg border border-zinc-100 object-cover h-32 w-32 transition-transform duration-150 hover:scale-105"
+                      className="rounded-lg border border-zinc-100 object-cover h-32 w-32 hover:scale-105 transition"
                     />
                   </button>
                 ))}
@@ -1614,22 +1636,18 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
               className="relative bg-white rounded-2xl p-6 shadow-xl flex flex-col items-center"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Fixed stage, so Prev/Next doesn't resize the dialog while the next file loads */}
-              <div className="grid place-items-center h-[70vh] w-[80vw] max-w-[1100px]">
-                <img
-                  src={`/${astroPhotos[gallery.objIdx].files[gallery.imgIdx]}`}
-                  alt={astroPhotos[gallery.objIdx].name}
-                  decoding="async"
-                  className="max-h-full max-w-full object-contain rounded-xl border border-zinc-200"
-                />
-              </div>
+              <img
+                src={`/${astroPhotos[gallery.objIdx].files[gallery.imgIdx]}`}
+                alt={astroPhotos[gallery.objIdx].name}
+                className="max-w-[80vw] max-h-[70vh] rounded-xl border border-zinc-200"
+              />
               <div className="mt-4 text-center">
                 <div className="font-medium">{astroPhotos[gallery.objIdx].name}</div>
                 <div className="text-sm text-zinc-600">{astroPhotos[gallery.objIdx].desc}</div>
               </div>
               <div className="flex gap-2 mt-4">
                 <button
-                  className="px-3 py-1 rounded-lg border border-zinc-200 bg-zinc-50 text-sm"
+                  className="px-3 py-1 rounded-lg border bg-zinc-50 text-sm"
                   disabled={gallery.imgIdx === 0}
                   onClick={() =>
                     setGallery((g) =>
@@ -1640,7 +1658,7 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
                   Prev
                 </button>
                 <button
-                  className="px-3 py-1 rounded-lg border border-zinc-200 bg-zinc-50 text-sm"
+                  className="px-3 py-1 rounded-lg border bg-zinc-50 text-sm"
                   disabled={gallery.imgIdx === astroPhotos[gallery.objIdx].files.length - 1}
                   onClick={() =>
                     setGallery((g) =>
@@ -1653,7 +1671,7 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
                   Next
                 </button>
                 <button
-                  className="px-3 py-1 rounded-lg border border-zinc-200 bg-zinc-50 text-sm"
+                  className="px-3 py-1 rounded-lg border bg-zinc-50 text-sm"
                   onClick={() => setGallery(null)}
                 >
                   Close
@@ -1809,6 +1827,7 @@ function TaoistPhilosophyNote({ onBack }: { onBack: () => void }) {
   // an exit animation never ran anyway.)
   return (
       <motion.div
+        {...NO_WAAPI}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: EASE_OUT }}
@@ -2015,7 +2034,7 @@ function DemoVideo({ src, width, height }: { src: string; width: number; height:
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 260);
+    const t = setTimeout(() => setMounted(true), 480);
     return () => clearTimeout(t);
   }, []);
 
@@ -3189,24 +3208,35 @@ function ProjectsResearch({
       <AnimatePresence>
         {active && (
           <motion.div
+            {...NO_WAAPI}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1, transition: { duration: 0.15 } }}
-            exit={{ opacity: 0, transition: { duration: 0.12 } }}
+            animate={{ opacity: 1, transition: { duration: 0.28, ease: "easeOut" } }}
+            exit={{ opacity: 0, transition: { duration: 0.2, ease: "easeIn", delay: 0.02 } }}
             onClick={() => setActive(null)}
           >
-            {/* A short ease-out tween rather than the old underdamped spring (which
-                overshot and took ~0.5s to settle), and no backdrop blur, which was
-                recomputed across the whole screen every frame. */}
+            {/* A critically damped spring (the old one overshot and wobbled), started just after
+                the frame that mounts the content, and no backdrop blur — that was recomputed
+                across the whole screen every frame. */}
             <motion.div
+              {...NO_WAAPI}
               role="dialog"
               aria-modal="true"
               aria-label={active.title}
               className="bg-white rounded-2xl shadow-2xl max-w-4xl w-[90%] p-6 overflow-y-auto overscroll-contain max-h-[85vh]"
               style={{ willChange: "transform, opacity" }}
-              initial={{ opacity: 0, scale: 0.97, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0, transition: { duration: 0.2, ease: EASE_OUT } }}
-              exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12, ease: "easeIn" } }}
+              initial={{ opacity: 0, scale: 0.96, y: 18 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: 0,
+                transition: {
+                  opacity: { duration: 0.25, ease: "easeOut", delay: ENTER_DELAY },
+                  scale: { ...SOFT_SPRING, delay: ENTER_DELAY },
+                  y: { ...SOFT_SPRING, delay: ENTER_DELAY },
+                },
+              }}
+              exit={{ opacity: 0, scale: 0.98, y: 8, transition: { duration: 0.18, ease: EASE_IN } }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-start">
