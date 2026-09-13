@@ -50,12 +50,6 @@ export type AstroObj = {
 
 export const ASTRO: AstroObj[] = [
   {
-    name: "Lunar Eclipse (Aug 2026)",
-    aliases: ["Moon", "lunar eclipse", "partial lunar eclipse", "blood moon"],
-    files: ["moon-eclipse.jpg", "moon-eclipse-2.jpg", "moon-eclipse-3.jpg"],
-    desc: "The recent partial lunar eclipse — Earth's shadow turning most of the Moon a coppery red while the top edge still catches direct sunlight.",
-  },
-  {
     name: "C27 (Crescent Nebula)",
     aliases: ["Crescent Nebula", "NGC 6888", "Cygnus"],
     files: ["C27(1).JPG", "C27(2).JPG"],
@@ -157,6 +151,12 @@ export const ASTRO: AstroObj[] = [
     files: ["field-object.jpg"],
     desc: "A dim galaxy field pushed hard out of a short integration — the kind of target that rewards more time under dark skies.",
     gear: "Canon mirrorless",
+  },
+  {
+    name: "Lunar Eclipse (Aug 2026)",
+    aliases: ["Moon", "lunar eclipse", "partial lunar eclipse", "blood moon"],
+    files: ["moon-eclipse.jpg", "moon-eclipse-2.jpg"],
+    desc: "The recent partial lunar eclipse — Earth's shadow turning most of the Moon a coppery red while the top edge still catches direct sunlight.",
   },
 ];
 
