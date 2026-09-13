@@ -3091,20 +3091,23 @@ function ProjectsResearch({
 // =======
 function Contact() {
   return (
-    <div className="flex flex-col items-center gap-6 py-8">
+    // The photo is portrait, so it sits beside the text rather than above it as
+    // a banner; below md the two stack and the photo is capped so it doesn't
+    // push the links off the first screen.
+    <div className="grid items-center gap-8 py-8 md:grid-cols-[minmax(0,18rem)_1fr] md:gap-12">
       <img
-        src="/ronak.jpg"
+        src="/ronak-nyc.jpg"
         alt="Ronak Toprani"
-        className="rounded-2xl border border-zinc-200 w-full max-w-3xl object-cover"
+        width={790}
+        height={1294}
+        className="mx-auto w-full max-w-[16rem] rounded-2xl border border-zinc-200 object-cover md:max-w-none"
       />
-      <div className="text-center max-w-xl">
+      <div className="mx-auto max-w-xl text-center md:mx-0 md:text-left">
         <h2 className="text-2xl font-semibold mb-2">Reach Out</h2>
         <p className="text-zinc-600 mb-1">
           hmu for collaborations, questions, or just to say hi
-         
         </p>
-               <div className="flex justify-center gap-8 mt-4">
-        
+        <div className="flex justify-center gap-8 mt-4 md:justify-start">
           <a
             href="mailto:ronaktoprani@gmail.com"
             target="_blank"
