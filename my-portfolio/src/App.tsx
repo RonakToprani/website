@@ -50,6 +50,12 @@ export type AstroObj = {
 
 export const ASTRO: AstroObj[] = [
   {
+    name: "Lunar Eclipse (Aug 2026)",
+    aliases: ["Moon", "lunar eclipse", "partial lunar eclipse", "blood moon"],
+    files: ["moon-eclipse.jpg", "moon-eclipse-2.jpg", "moon-eclipse-3.jpg"],
+    desc: "The recent partial lunar eclipse — Earth's shadow turning most of the Moon a coppery red while the top edge still catches direct sunlight.",
+  },
+  {
     name: "C27 (Crescent Nebula)",
     aliases: ["Crescent Nebula", "NGC 6888", "Cygnus"],
     files: ["C27(1).JPG", "C27(2).JPG"],
@@ -107,8 +113,8 @@ export const ASTRO: AstroObj[] = [
   {
     name: "Andromeda Galaxy (M31)",
     aliases: ["Andromeda", "M31", "NGC 224"],
-    files: ["andromeda.jpeg"],
-    desc: "The closest major galaxy to the Milky Way, captured on a somewhat cloudy night in Toronto.",
+    files: ["andromeda.jpeg", "andromeda-2.jpg", "andromeda-3.jpg"],
+    desc: "The closest major galaxy to the Milky Way, shot from Toronto — the first on a somewhat cloudy night, the other two with its dust lanes and companion M110 coming through.",
     gear: "Canon mirrorless",
     ra: hms(0, 42, 44.3),
     dec: dms(41, 16, 9),
@@ -1490,7 +1496,7 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
           {astroPhotos.map((obj, objIdx) => (
             <div key={obj.name} className="rounded-2xl border border-zinc-200 p-4 bg-white">
               <div className="font-medium mb-1">{obj.name}</div>
-              <div className="flex gap-2 mb-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 {obj.files.map((file, imgIdx) => (
                   <button
                     key={file}
