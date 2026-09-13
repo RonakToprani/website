@@ -15,7 +15,7 @@ const DEG = Math.PI / 180;
 const RAD = 180 / Math.PI;
 
 // Where I shoot from.
-export const SITE = { lat: 43.6532, lon: -79.3832, label: "Toronto" };
+export const SITE = { lat: 43.6532, lon: -79.3832, label: "Toronto", tz: "America/Toronto" };
 
 // Sun altitude below which the sky is properly dark (astronomical twilight).
 const DARK_ALT = -18;
@@ -197,6 +197,9 @@ export function reportTarget(
       }
     }
   }
+  // Never above the horizon while it's dark: there's no peak worth reporting, and
+  // leaving peakAt set made "down all night" unreachable.
+  if (peakAlt <= 0) peakAt = null;
 
   let moonWashed = false;
   if (peakAt) {
@@ -222,11 +225,14 @@ export function reportTarget(
 /** Rise/set-agnostic helper: is this thing up right now? */
 export const isUp = (eq: Equatorial, now: Date) => toHorizontal(eq, now).alt > 0;
 
-/** "10:42 PM" in the viewer's own locale. */
+/** "10:42 PM" on the site's clock, formatted in the viewer's locale. The sky block
+ *  is about the night over Toronto, so a visitor elsewhere shouldn't see their own time. */
 export const clockTime = (d: Date) =>
-  d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone: SITE.tz });
 
 /** Convert "20h 12m 07s" style coordinates to the decimal degrees used above. */
 export const hms = (h: number, m: number, s: number) => (h + m / 60 + s / 3600) * 15;
+// The sign comes from `d`, including -0, so a declination like -0° 30′ is dms(-0, 30, 0).
+// (Math.sign(0) is 0, which used to zero out every declination between -1° and +1°.)
 export const dms = (d: number, m: number, s: number) =>
-  Math.sign(d) * (Math.abs(d) + m / 60 + s / 3600);
+  (d < 0 || Object.is(d, -0) ? -1 : 1) * (Math.abs(d) + m / 60 + s / 3600);

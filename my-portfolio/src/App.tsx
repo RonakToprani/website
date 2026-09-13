@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import {
   Home,
   BookText,
@@ -173,9 +173,15 @@ export default function Portfolio() {
   // Deep-link target set by the universal search (e.g. open a galaxy or a project)
   const [focus, setFocus] = useState<FocusTarget | null>(null);
 
+  // `nav` bumps on every navigation so the page remounts even when the route and
+  // focus are unchanged — re-opening the same project from ⌘K, or clicking Notes
+  // while an essay is open, would otherwise do nothing.
+  const [nav, setNav] = useState(0);
   const go = (to: string, f?: FocusTarget) => {
     setRoute(to);
     setFocus(f ?? null);
+    setNav((n) => n + 1);
+    window.scrollTo({ top: 0 });
   };
 
   // keyboard: ⌘K / Ctrl-K / "/" toggles the command palette
@@ -195,6 +201,7 @@ export default function Portfolio() {
   }, []);
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen bg-white text-zinc-900">
       <Header onOpenPalette={() => setPaletteOpen(true)} />
       <div className="mx-auto max-w-7xl grid grid-cols-12 gap-4 px-4 md:px-6 py-6">
@@ -203,40 +210,40 @@ export default function Portfolio() {
         </aside>
         <main className="col-span-12 md:col-span-9 lg:col-span-10">
           <NotionSurface>
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" initial={false}>
               {route === "home" && (
-                <Page key="home">
+                <Page key={`home-${nav}`}>
                   <Hero />
-                  <QuickBlocks setRoute={setRoute} />
+                  <QuickBlocks setRoute={(r) => go(r)} />
                 </Page>
               )}
               {route === "projects" && (
-                <Page key="projects" title="Projects" subtitle="Selected builds, experiments, and demos.">
+                <Page key={`projects-${nav}`} title="Projects" subtitle="Selected builds, experiments, and demos.">
                   <Projects />
                 </Page>
               )}
               {route === "research" && (
-                <Page key="research" title="Physics Research" subtitle="Notes, preprints, and interactive derivations.">
+                <Page key={`research-${nav}`} title="Physics Research" subtitle="Notes, preprints, and interactive derivations.">
                   <Research />
                 </Page>
               )}
               {route === "blog" && (
-                <Page key="notes" title="Notes" subtitle="Short notes, and a growing astrophotography log.">
+                <Page key={`notes-${nav}`} title="Notes" subtitle="Short notes, and a growing astrophotography log.">
                   <Notes focusAstro={focus?.astro} />
                 </Page>
               )}
               {route === "graph" && (
-                <Page key="graph" title="Idea Graph" subtitle="A current map linking projects, papers, and concepts.">
+                <Page key={`graph-${nav}`} title="Idea Graph" subtitle="A current map linking projects, papers, and concepts.">
                   <IdeaGraph onNavigate={go} />
                 </Page>
               )}
               {route === "work" && (
-                <Page key="work" title="Projects + Research" subtitle="Selected research, builds, and experiments.">
+                <Page key={`work-${nav}`} title="Projects + Research" subtitle="Selected research, builds, and experiments.">
                   <ProjectsResearch focusProject={focus?.project} focusCategory={focus?.category} />
                 </Page>
               )}
               {route === "contact" && (
-                <Page key="contact" title="Contact" subtitle="Let's connect.">
+                <Page key={`contact-${nav}`} title="Contact" subtitle="Let's connect.">
                   <Contact />
                 </Page>
               )}
@@ -245,13 +252,14 @@ export default function Portfolio() {
         </main>
       </div>
 
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        onNavigate={go}
-      />
+      <AnimatePresence>
+        {paletteOpen && (
+          <CommandPalette open onClose={() => setPaletteOpen(false)} onNavigate={go} />
+        )}
+      </AnimatePresence>
       <Footer />
     </div>
+    </MotionConfig>
   );
 }
 
@@ -271,7 +279,13 @@ function ThemeToggle() {
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem("theme")) setDark(e.matches);
+      let saved: string | null = null;
+      try {
+        saved = localStorage.getItem("theme");
+      } catch {
+        // storage blocked — just follow the OS
+      }
+      if (!saved) setDark(e.matches);
     };
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
@@ -282,7 +296,11 @@ function ThemeToggle() {
       onClick={() => {
         const next = !dark;
         setDark(next);
-        localStorage.setItem("theme", next ? "dark" : "light");
+        try {
+          localStorage.setItem("theme", next ? "dark" : "light");
+        } catch {
+          // storage blocked — the choice just won't persist
+        }
       }}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       title={dark ? "Light mode" : "Dark mode"}
@@ -295,7 +313,7 @@ function ThemeToggle() {
 
 function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
   return (
-    <div className="border-b border-zinc-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 top-0 z-20">
+    <div className="border-b border-zinc-200 bg-white z-20">
       <div className="mx-auto max-w-7xl flex items-center justify-between px-4 md:px-6 py-3">
         <div className="flex items-center gap-3">
           {/* <div className="size-7 rounded-lg bg-zinc-900 text-white grid place-items-center font-bold">R</div> */}
@@ -363,13 +381,15 @@ function NotionSurface({ children }: { children: React.ReactNode }) {
   );
 }
 
+// One ease-out curve for every enter animation: fast start, soft landing, no overshoot.
+const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
 function Page({ title, subtitle, children }: { title?: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <motion.section
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0, transition: { duration: 0.18, ease: EASE_OUT } }}
+      exit={{ opacity: 0, transition: { duration: 0.08 } }}
       className="space-y-8"
     >
       {title && (
@@ -399,6 +419,9 @@ function Hero(){
          <img
           src="/home.jpeg"
           alt="Ronak Toprani"
+          width={1200}
+          height={900}
+          decoding="async"
           className="rounded-2xl border border-zinc-200 w-full max-w-xl mx-auto"
         />
       </div>
@@ -645,7 +668,8 @@ function TonightsSky({
       dark,
       moon,
       rows,
-      unplotted: photos.filter((o) => o.ra === undefined).length,
+      // The Moon has no fixed RA/Dec — it isn't an unsolved field waiting to be plotted.
+      unplotted: photos.filter((o) => o.ra === undefined && !o.aliases.includes("Moon")).length,
       oldest: Math.max(...photos.map((o) => o.distanceLy ?? 0)),
     };
   }, [photos, now]);
@@ -658,7 +682,7 @@ function TonightsSky({
         </h4>
         <div className="flex items-center gap-2 text-xs text-zinc-500">
           <span className="relative flex size-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="absolute inline-flex h-full w-full motion-safe:animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
           </span>
           live over {SITE.label} · {clockTime(now)}
@@ -697,7 +721,7 @@ function TonightsSky({
               onClick={() => onOpen(objIdx)}
               className="group w-full py-2.5 text-left hover:bg-zinc-50/70 rounded-xl px-2 -mx-2 transition"
             >
-              <div className="flex items-baseline justify-between gap-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className={`size-2 shrink-0 rounded-full ${s.dot}`} />
                   <span className="text-sm font-medium truncate group-hover:underline">
@@ -707,7 +731,7 @@ function TonightsSky({
                     {s.label}
                   </span>
                   {report.moonWashed && (
-                    <span className="shrink-0 rounded-lg border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] text-zinc-500">
+                    <span className="hidden sm:inline shrink-0 rounded-lg border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] text-zinc-500">
                       moon nearby
                     </span>
                   )}
@@ -817,6 +841,8 @@ function IdeaGraph({ onNavigate }: { onNavigate: (to: string, f?: FocusTarget) =
   const lineEl = useRef<(SVGLineElement | null)[]>([]);
   const body = useRef<Record<string, Body>>({});
   const alpha = useRef(1); // simulation "temperature" — decays to near-still
+  // Restarts the rAF loop once it has gone idle (wired up inside the effect below).
+  const kick = useRef(() => {});
   const drag = useRef<{ id: string; ox: number; oy: number; moved: boolean; lx: number; ly: number } | null>(null);
   const suppressClick = useRef(false);
   const hiddenRef = useRef(hidden);
@@ -835,6 +861,7 @@ function IdeaGraph({ onNavigate }: { onNavigate: (to: string, f?: FocusTarget) =
     hiddenRef.current = hidden;
     contextRef.current = context;
     alpha.current = Math.max(alpha.current, 0.55);
+    kick.current();
   }, [hidden, context]);
 
   useEffect(() => {
@@ -850,14 +877,20 @@ function IdeaGraph({ onNavigate }: { onNavigate: (to: string, f?: FocusTarget) =
       }
     });
 
+    // Returns whether any card visibly moved this frame.
     const paint = () => {
+      let changed = false;
       for (const n of nodes) {
         const b = body.current[n.id];
         const e = nodeEl.current[n.id];
         if (!e) continue;
         // Rounded: at rest the solver leaves a sub-pixel jitter, and fractional
         // transforms make the card text shimmer as it re-rasterises.
-        e.style.transform = `translate(${Math.round(b.x - b.w / 2)}px, ${Math.round(b.y - b.h / 2)}px)`;
+        const tf = `translate(${Math.round(b.x - b.w / 2)}px, ${Math.round(b.y - b.h / 2)}px)`;
+        if (e.style.transform !== tf) {
+          e.style.transform = tf;
+          changed = true;
+        }
         e.style.display = hiddenRef.current.has(n.id) ? "none" : "";
         // Neighbours of a match are shown for context, but faded so it's obvious
         // which cards actually matched what you typed.
@@ -875,6 +908,7 @@ function IdeaGraph({ onNavigate }: { onNavigate: (to: string, f?: FocusTarget) =
         ln.setAttribute("x2", String(t.x));
         ln.setAttribute("y2", String(t.y));
       });
+      return changed;
     };
 
     const step = () => {
@@ -1001,19 +1035,41 @@ function IdeaGraph({ onNavigate }: { onNavigate: (to: string, f?: FocusTarget) =
     };
 
     // Reduced motion: settle it off-screen so the page opens already at rest.
-    // The loop still runs, but at resting alpha nothing moves unless dragged.
+    // After that the loop idles until something is dragged or shaken.
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
       for (let i = 0; i < 400; i++) step();
     }
 
+    // Run only while something is actually moving. The old loop never stopped, so an
+    // idle graph still did four O(n²) passes and restyled every card each frame.
+    // Cards are painted at whole pixels, so "settled" means nothing has visibly moved for
+    // half a second — the solver's sub-pixel jitter never gets velocities to exactly zero.
+    // A 3s cap after cooling covers the rare ±1px oscillation between two touching cards.
     let raf = 0;
+    let running = false;
+    let still = 0;
+    let cooled = 0;
     const frame = () => {
       step();
-      paint();
+      still = paint() ? 0 : still + 1;
+      const hot = !!drag.current || alpha.current > 0.02;
+      cooled = hot ? 0 : cooled + 1;
+      if (hot || (still < 30 && cooled < 180)) raf = requestAnimationFrame(frame);
+      else running = false;
+    };
+    kick.current = () => {
+      still = 0;
+      cooled = 0;
+      if (running) return;
+      running = true;
       raf = requestAnimationFrame(frame);
     };
-    raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    kick.current();
+    return () => {
+      cancelAnimationFrame(raf);
+      running = false;
+      kick.current = () => {};
+    };
   }, [nodes, links]);
 
   // Grab, drag, fling. Pointer events so it works the same with a finger.
@@ -1030,6 +1086,7 @@ function IdeaGraph({ onNavigate }: { onNavigate: (to: string, f?: FocusTarget) =
     };
     b.fixed = true;
     alpha.current = 0.9;
+    kick.current();
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
@@ -1069,6 +1126,7 @@ function IdeaGraph({ onNavigate }: { onNavigate: (to: string, f?: FocusTarget) =
       b.vy += (Math.random() - 0.5) * 26;
     }
     alpha.current = 1;
+    kick.current();
   };
 
   const open = (n: GraphNode) => {
@@ -1136,7 +1194,7 @@ function IdeaGraph({ onNavigate }: { onNavigate: (to: string, f?: FocusTarget) =
             onDoubleClick={() => open(n)}
             style={{ left: 0, top: 0, touchAction: "none" }}
             className={`absolute w-[140px] rounded-2xl border px-3 py-2 text-left shadow-sm select-none cursor-grab active:cursor-grabbing transition-opacity duration-200 ${
-              active === n.id ? "border-zinc-900 bg-white" : "border-zinc-200 bg-white/80 backdrop-blur"
+              active === n.id ? "border-zinc-900 bg-white" : "border-zinc-200 bg-white"
             }`}
           >
             <div className="text-[11px] uppercase tracking-wide text-zinc-400">{n.kind}</div>
@@ -1299,7 +1357,7 @@ function CommandPalette({
 }: {
   open: boolean;
   onClose: () => void;
-  onNavigate: (to: string, focus?: { astro?: string; project?: string }) => void;
+  onNavigate: (to: string, focus?: FocusTarget) => void;
 }) {
   const [input, setInput] = useState("");
   const [active, setActive] = useState(0);
@@ -1358,12 +1416,18 @@ function CommandPalette({
   };
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+    <div className="fixed inset-0 z-50" data-palette>
       <motion.div
-        initial={{ opacity: 0, y: 10, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -10, scale: 0.98 }}
+        className="absolute inset-0 bg-black/30"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1, transition: { duration: 0.12 } }}
+        exit={{ opacity: 0, transition: { duration: 0.1 } }}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.16, ease: EASE_OUT } }}
+        exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.1 } }}
         className="relative mx-auto mt-24 w-full max-w-xl rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl"
       >
         <div className="flex items-center gap-2 border-b border-zinc-200 px-2 pb-2">
@@ -1384,6 +1448,10 @@ function CommandPalette({
           {results.map((e, i) => (
             <button
               key={e.kind + e.title}
+              // keep the keyboard-highlighted row in view as ↑↓ move past the fold
+              ref={(el) => {
+                if (i === active) el?.scrollIntoView({ block: "nearest" });
+              }}
               onMouseEnter={() => setActive(i)}
               onClick={() => choose(e)}
               className={`w-full text-left rounded-xl px-3 py-2 flex items-center gap-3 ${
@@ -1446,10 +1514,21 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
     }
   }, [focusAstro, astroPhotos]);
 
+  // Warm the cache for every frame of the object being viewed, so Prev/Next is instant.
+  const galleryObj = gallery?.objIdx;
+  useEffect(() => {
+    if (galleryObj === undefined) return;
+    astroPhotos[galleryObj].files.forEach((f) => {
+      new Image().src = `/${f}`;
+    });
+  }, [galleryObj, astroPhotos]);
+
   // Keyboard nav for the lightbox
   useEffect(() => {
     if (!gallery) return;
     const onKey = (e: KeyboardEvent) => {
+      // the ⌘K palette on top owns the keyboard while it's open
+      if (document.querySelector("[data-palette]")) return;
       if (e.key === "Escape") setGallery(null);
       if (e.key === "ArrowRight")
         setGallery((g) =>
@@ -1503,10 +1582,15 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
                     onClick={() => setGallery({ objIdx, imgIdx })}
                     className="focus:outline-none"
                   >
+                    {/* 256px centre-crop thumbnails live in public/thumbs (regenerate when adding photos) */}
                     <img
-                      src={`/${file}`}
+                      src={`/thumbs/${file.replace(/\.[^.]+$/, ".jpg")}`}
                       alt={obj.name}
-                      className="rounded-lg border border-zinc-100 object-cover h-32 w-32 hover:scale-105 transition"
+                      width={128}
+                      height={128}
+                      loading="lazy"
+                      decoding="async"
+                      className="rounded-lg border border-zinc-100 object-cover h-32 w-32 transition-transform duration-150 hover:scale-105"
                     />
                   </button>
                 ))}
@@ -1530,18 +1614,22 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
               className="relative bg-white rounded-2xl p-6 shadow-xl flex flex-col items-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <img
-                src={`/${astroPhotos[gallery.objIdx].files[gallery.imgIdx]}`}
-                alt={astroPhotos[gallery.objIdx].name}
-                className="max-w-[80vw] max-h-[70vh] rounded-xl border border-zinc-200"
-              />
+              {/* Fixed stage, so Prev/Next doesn't resize the dialog while the next file loads */}
+              <div className="grid place-items-center h-[70vh] w-[80vw] max-w-[1100px]">
+                <img
+                  src={`/${astroPhotos[gallery.objIdx].files[gallery.imgIdx]}`}
+                  alt={astroPhotos[gallery.objIdx].name}
+                  decoding="async"
+                  className="max-h-full max-w-full object-contain rounded-xl border border-zinc-200"
+                />
+              </div>
               <div className="mt-4 text-center">
                 <div className="font-medium">{astroPhotos[gallery.objIdx].name}</div>
                 <div className="text-sm text-zinc-600">{astroPhotos[gallery.objIdx].desc}</div>
               </div>
               <div className="flex gap-2 mt-4">
                 <button
-                  className="px-3 py-1 rounded-lg border bg-zinc-50 text-sm"
+                  className="px-3 py-1 rounded-lg border border-zinc-200 bg-zinc-50 text-sm"
                   disabled={gallery.imgIdx === 0}
                   onClick={() =>
                     setGallery((g) =>
@@ -1552,7 +1640,7 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
                   Prev
                 </button>
                 <button
-                  className="px-3 py-1 rounded-lg border bg-zinc-50 text-sm"
+                  className="px-3 py-1 rounded-lg border border-zinc-200 bg-zinc-50 text-sm"
                   disabled={gallery.imgIdx === astroPhotos[gallery.objIdx].files.length - 1}
                   onClick={() =>
                     setGallery((g) =>
@@ -1565,7 +1653,7 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
                   Next
                 </button>
                 <button
-                  className="px-3 py-1 rounded-lg border bg-zinc-50 text-sm"
+                  className="px-3 py-1 rounded-lg border border-zinc-200 bg-zinc-50 text-sm"
                   onClick={() => setGallery(null)}
                 >
                   Close
@@ -1716,21 +1804,14 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
 
 // --- Taoist Philosophy Note Page ---
 function TaoistPhilosophyNote({ onBack }: { onBack: () => void }) {
-  // Apple-like smooth animation variants
-  const variants = {
-    initial: { opacity: 0, y: 40, scale: 0.98 },
-    animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] } },
-    exit: { opacity: 0, y: -30, scale: 0.97, transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] } },
-  };
-
+  // A short fade-and-rise with no scale — scaling a page of text re-rasterises it
+  // every frame and reads as soft. (Notes swaps this in with an early return, so
+  // an exit animation never ran anyway.)
   return (
-    <AnimatePresence mode="wait">
       <motion.div
-        key="taoist-note"
-        variants={variants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: EASE_OUT }}
         className="font-sans rounded-3xl border border-zinc-200 bg-white p-6 md:p-12 shadow-[0_1px_3px_rgba(0,0,0,0.05)] min-h-[80vh] flex flex-col max-w-4xl mx-auto my-8"
         style={{ overflow: "hidden" }}
       >
@@ -1770,12 +1851,14 @@ function TaoistPhilosophyNote({ onBack }: { onBack: () => void }) {
           <section>
             <div className="relative group overflow-hidden rounded-3xl border border-zinc-200">
               <img
-                src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1674&auto=format&fit=crop"
+                src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1200&auto=format&fit=crop"
                 alt="River flowing through a misty valley"
-                className="w-full object-cover grayscale hover:grayscale-0 transition-all duration-1000 ease-in-out"
+                loading="lazy"
+                decoding="async"
+                className="w-full object-cover grayscale hover:grayscale-0 transition-[filter] duration-300 ease-out"
                 style={{ maxHeight: 420 }}
               />
-              <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] text-zinc-500 uppercase tracking-tight">
+              <div className="absolute bottom-4 right-4 bg-white/90 px-3 py-1 rounded-full text-[10px] text-zinc-500 uppercase tracking-tight">
                 finding the destination through the motion of the river, not by staring at the shore
               </div>
             </div>
@@ -1890,7 +1973,6 @@ function TaoistPhilosophyNote({ onBack }: { onBack: () => void }) {
 
         </div>
       </motion.div>
-    </AnimatePresence>
   );
 }
 
@@ -1922,6 +2004,51 @@ const GITHUB_URL = "https://github.com/RonakToprani";
 const LINKEDIN_MARK =
   "M4.98 3.5C4.98 4.88 3.87 6 2.5 6S.02 4.88.02 3.5C.02 2.12 1.13 1 2.5 1s2.48 1.12 2.48 2.5zM.25 8h4.5v12H.25V8zm7.5 0h4.31v1.64h.06c.6-1.14 2.07-2.34 4.26-2.34 4.56 0 5.4 3 5.4 6.9V20h-4.5v-5.5c0-1.31-.02-3-1.83-3-1.83 0-2.11 1.43-2.11 2.9V20h-4.5V8z";
 const FIXATE_REPO = "https://github.com/RonakToprani/fixate";
+
+// A demo clip inside a project modal. The <video> element itself isn't created until
+// the modal's open animation has finished: setting up the media player and fetching
+// metadata mid-animation is what dropped frames on the first open. Until then a black
+// box holds the exact aspect ratio, so nothing shifts when it swaps in. It plays while
+// on screen and pauses when scrolled away.
+function DemoVideo({ src, width, height }: { src: string; width: number; height: number }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 260);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!mounted || !v) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) v.play().catch(() => {});
+        else v.pause();
+      },
+      { threshold: 0.4 }
+    );
+    io.observe(v);
+    return () => io.disconnect();
+  }, [mounted]);
+
+  return (
+    <div className="w-full bg-black" style={{ aspectRatio: `${width} / ${height}` }}>
+      {mounted && (
+        <video
+          ref={ref}
+          src={src}
+          controls
+          loop
+          muted
+          playsInline
+          className="block w-full h-full"
+        />
+      )}
+    </div>
+  );
+}
 
 function LivePreview({ url, title }: { url: string; title: string }) {
   const host = useMemo(() => {
@@ -1970,7 +2097,7 @@ function LivePreview({ url, title }: { url: string; title: string }) {
         {live && ready && (
           <span className="flex shrink-0 items-center gap-1 text-[10px] text-zinc-500">
             <span className="relative flex size-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="absolute inline-flex h-full w-full motion-safe:animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
             </span>
             live
@@ -2002,25 +2129,8 @@ function LivePreview({ url, title }: { url: string; title: string }) {
             </span>
             <span className="text-xs text-zinc-500">the real deployment, running right here</span>
           </button>
-        ) : blocked && !ready ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
-            <p className="text-sm text-zinc-600">This deployment won’t load inside a frame.</p>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-white transition"
-            >
-              Open it in a new tab <ExternalLink className="size-3.5" />
-            </a>
-          </div>
         ) : (
           <>
-            {!ready && (
-              <div className="absolute inset-0 flex items-center justify-center text-xs text-zinc-500">
-                loading the dashboard…
-              </div>
-            )}
             <iframe
               src={url}
               title={title}
@@ -2036,6 +2146,26 @@ function LivePreview({ url, title }: { url: string; title: string }) {
                 transition: "opacity .35s ease",
               }}
             />
+            {/* The frame stays mounted under these overlays, so a deployment that's merely
+                slow still fires onLoad after the timeout instead of being torn down. */}
+            {!ready &&
+              (blocked ? (
+    <div className="absolute inset-0 flex flex-col bg-zinc-50 items-center justify-center gap-2 px-6 text-center">
+                <p className="text-sm text-zinc-600">This deployment won’t load inside a frame.</p>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-white transition"
+                >
+                  Open it in a new tab <ExternalLink className="size-3.5" />
+                </a>
+              </div>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xs text-zinc-500">
+                  loading the dashboard…
+                </div>
+              ))}
           </>
         )}
       </div>
@@ -2167,16 +2297,7 @@ const WORK = [
           </p>
           <figure className="space-y-1.5">
             <div className="rounded-xl border border-zinc-200 overflow-hidden bg-black">
-              <video
-                src="/Fixate.mp4"
-                controls
-                loop
-                muted
-                autoPlay
-                playsInline
-                preload="metadata"
-                className="w-full block"
-              />
+              <DemoVideo src="/Fixate.mp4" width={1920} height={1080} />
             </div>
             <figcaption className="text-xs text-zinc-500">
               Demo — Fixate running a full focus session, start to finish.
@@ -2249,16 +2370,7 @@ const WORK = [
           </p>
           <figure className="space-y-1.5">
             <div className="rounded-2xl border border-zinc-200 overflow-hidden bg-black mx-auto w-full max-w-[260px]">
-              <video
-                src="/kadence.mp4"
-                controls
-                loop
-                muted
-                autoPlay
-                playsInline
-                preload="metadata"
-                className="w-full block"
-              />
+              <DemoVideo src="/kadence.mp4" width={524} height={1080} />
             </div>
             <figcaption className="text-xs text-zinc-500 text-center">
               Demo — live biometrics streaming off the wearable over Bluetooth into the on-device dashboard.
@@ -2296,7 +2408,7 @@ const WORK = [
                 </p>
               </div>
               <div>
-                <img
+                <img loading="lazy" decoding="async"
                   src="/kadence-stress.jpg"
                   alt="Kadence stress-through-the-day methodology"
                   className="rounded-lg border border-zinc-200 w-full max-w-[220px] mx-auto"
@@ -2324,7 +2436,7 @@ const WORK = [
                 </p>
               </div>
               <div>
-                <img
+                <img loading="lazy" decoding="async"
                   src="/kadence-sleep.jpg"
                   alt="Kadence sleep staging and sleep-need methodology"
                   className="rounded-lg border border-zinc-200 w-full max-w-[170px] mx-auto"
@@ -2364,16 +2476,7 @@ const WORK = [
           </p>
           <figure className="space-y-1.5">
             <div className="rounded-xl border border-zinc-200 overflow-hidden bg-black">
-              <video
-                src="/kodo.mp4"
-                controls
-                loop
-                muted
-                autoPlay
-                playsInline
-                preload="metadata"
-                className="w-full block"
-              />
+              <DemoVideo src="/kodo.mp4" width={1728} height={1080} />
             </div>
             <figcaption className="text-xs text-zinc-500">
               Demo — brain-dump input, local-SLM prioritization and time estimates, and the calendar filling in.
@@ -2528,10 +2631,10 @@ const WORK = [
           </p>
           {/* Main Dashboard Overview */}
           <div className="space-y-2">
-            <img
+            <img loading="lazy" decoding="async"
               src="/optionsdashMain.png"
               alt="Main Dashboard Interface"
-              className="rounded-xl border shadow w-full max-w-2xl mx-auto"
+              className="rounded-xl border border-zinc-200 shadow w-full max-w-2xl mx-auto"
               style={{ marginBottom: "20px", lineHeight: "1.5" }}
             />
             <p className="text-xs text-zinc-500 mt-1">
@@ -2544,14 +2647,14 @@ const WORK = [
           {/* Multi-view Analysis */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <img src="/IV smile.png" alt="IV Smile Visualization" className="rounded-xl border shadow" /> 
+              <img loading="lazy" decoding="async" src="/IV smile.png" alt="IV Smile Visualization" className="rounded-xl border border-zinc-200 shadow" /> 
               <p className="text-xs text-zinc-500 mt-1">
                 <b>Implied Volatility Smile</b> – Time-series analysis showing how call and put IV curves evolve. The ATM inflection point reveals market sentiment shifts and skew dynamics critical for risk reversal strategies.
               </p>
             </div> 
 
             <div>
-              <img src="/IV surface.png" alt="3D Volatility Surface" className="rounded-xl border shadow" /> 
+              <img loading="lazy" decoding="async" src="/IV surface.png" alt="3D Volatility Surface" className="rounded-xl border border-zinc-200 shadow" /> 
               <p className="text-xs text-zinc-500 mt-1">
                 <b>3D Volatility Surface</b> – Interactive surface plot mapping implied volatility across strike prices and time to expiration, revealing term structure patterns and arbitrage opportunities in multi-dimensional space.
               </p>
@@ -2561,10 +2664,10 @@ const WORK = [
           {/* Risk-Neutral Probability Density Section */} 
          <div className="grid grid-cols-2 gap-3">
           <div>
-            <img
+            <img loading="lazy" decoding="async"
               src="/Risk neutral density .png"
               alt="Risk-Neutral Probability Density"
-              className="rounded-xl border shadow w-full"
+              className="rounded-xl border border-zinc-200 shadow w-full"
             />
           </div>
 
@@ -2606,10 +2709,10 @@ const WORK = [
           {/* Images with explanations */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <img
+              <img loading="lazy" decoding="async"
                 src="/filters.png"
                 alt="JWST Filters"
-                className="rounded-xl border shadow"
+                className="rounded-xl border border-zinc-200 shadow"
               />
               <p className="text-xs text-zinc-500 mt-1">
                 <b>JWST Filters</b> – each filter isolates light at specific
@@ -2618,10 +2721,10 @@ const WORK = [
               </p>
             </div>
             <div>
-              <img
+              <img loading="lazy" decoding="async"
                 src="/sites.png"
                 alt="Classification Sites"
-                className="rounded-xl border shadow"
+                className="rounded-xl border border-zinc-200 shadow"
               />
               <p className="text-xs text-zinc-500 mt-1">
                 <b>Classification Sites</b> – selected training/testing regions
@@ -2634,43 +2737,43 @@ const WORK = [
           <table className="w-full text-xs border border-zinc-300 rounded-md overflow-hidden">
             <thead className="bg-zinc-100">
               <tr>
-                <th className="border px-2 py-1">Class</th>
-                <th className="border px-2 py-1">SVM</th>
-                <th className="border px-2 py-1">RF</th>
-                <th className="border px-2 py-1">KNN</th>
-                <th className="border px-2 py-1">Avg</th>
+                <th className="border border-zinc-200 px-2 py-1">Class</th>
+                <th className="border border-zinc-200 px-2 py-1">SVM</th>
+                <th className="border border-zinc-200 px-2 py-1">RF</th>
+                <th className="border border-zinc-200 px-2 py-1">KNN</th>
+                <th className="border border-zinc-200 px-2 py-1">Avg</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td className="border px-2 py-1">C1 Background</td>
-                <td className="border px-2 py-1">0.91</td>
-                <td className="border px-2 py-1">0.98</td>
-                <td className="border px-2 py-1">0.99</td>
-                <td className="border px-2 py-1">0.97</td>
+                <td className="border border-zinc-200 px-2 py-1">C1 Background</td>
+                <td className="border border-zinc-200 px-2 py-1">0.91</td>
+                <td className="border border-zinc-200 px-2 py-1">0.98</td>
+                <td className="border border-zinc-200 px-2 py-1">0.99</td>
+                <td className="border border-zinc-200 px-2 py-1">0.97</td>
               </tr>
               <tr>
-                <td className="border px-2 py-1">C2 Bulge</td>
-                <td className="border px-2 py-1">0.80</td>
-                <td className="border px-2 py-1">0.80</td>
-                <td className="border px-2 py-1">1.00</td>
-                <td className="border px-2 py-1">0.87</td>
+                <td className="border border-zinc-200 px-2 py-1">C2 Bulge</td>
+                <td className="border border-zinc-200 px-2 py-1">0.80</td>
+                <td className="border border-zinc-200 px-2 py-1">0.80</td>
+                <td className="border border-zinc-200 px-2 py-1">1.00</td>
+                <td className="border border-zinc-200 px-2 py-1">0.87</td>
               </tr>
               <tr>
-                <td className="border px-2 py-1">C3 HII Region</td>
-                <td className="border px-2 py-1">0.85</td>
-                <td className="border px-2 py-1">1.00</td>
-                <td className="border px-2 py-1">0.67</td>
-                <td className="border px-2 py-1">0.84</td>
+                <td className="border border-zinc-200 px-2 py-1">C3 HII Region</td>
+                <td className="border border-zinc-200 px-2 py-1">0.85</td>
+                <td className="border border-zinc-200 px-2 py-1">1.00</td>
+                <td className="border border-zinc-200 px-2 py-1">0.67</td>
+                <td className="border border-zinc-200 px-2 py-1">0.84</td>
               </tr>
             </tbody>
           </table>
 
           {/* Mock graph 
-          <img
+          <img loading="lazy" decoding="async"
             src="/f1_comparison_chart.png"
             alt="F1 Score Comparison"
-            className="rounded-xl border shadow"
+            className="rounded-xl border border-zinc-200 shadow"
           />*/}
           <p className="text-xs text-zinc-500">
             Average F1-score comparison across classifiers, highlighting
@@ -2738,7 +2841,7 @@ const WORK = [
   //           <img
   //             src="/ngc2023_spitzer.jpg"
   //             alt="NGC 2023 IRAC 8um"
-  //             className="rounded-xl border shadow"
+  //             className="rounded-xl border border-zinc-200 shadow"
   //           />
   //           <p className="text-xs text-zinc-500 mt-1">
   //             <b>Ionic Proxy (8.0µm)</b> – Mapping the diffuse PAH-rich shell where ionization is driven by intense stellar UV radiation.
@@ -2748,7 +2851,7 @@ const WORK = [
   //           <img
   //             src="/FOVs_IRAC_LL2_S_SL1.png"
   //             alt="Field of View Overlays"
-  //             className="rounded-xl border shadow"
+  //             className="rounded-xl border border-zinc-200 shadow"
   //           />
   //           <p className="text-xs text-zinc-500 mt-1">
   //             <b>Instrumental Calibration</b> – Geometric overlay of SL1 (white box) and LL2 spectral slits onto photometric imaging to resolve spatial discontinuities.
@@ -2811,20 +2914,20 @@ const WORK = [
       {/* Technical Deep Dive */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <img
+          <img loading="lazy" decoding="async"
             src="/ngc2023_spitzer.jpg"
             alt="NGC 2023 IRAC 8um"
-            className="rounded-xl border shadow h-40 w-full object-cover"
+            className="rounded-xl border border-zinc-200 shadow h-40 w-full object-cover"
           />
           <p className="text-xs text-zinc-500 mt-1">
             <b>Ionic Proxy (8.0µm)</b> – Using IRAC data as a representative for ionic PAHs, where ~80% of the emission in PDRs originates from these molecules.
           </p>
         </div>
         <div>
-          <img
+          <img loading="lazy" decoding="async"
             src="/FOVs_IRAC_LL2_S_SL1.png"
             alt="Field of View Overlays"
-            className="rounded-xl border shadow h-40 w-full object-cover"
+            className="rounded-xl border border-zinc-200 shadow h-40 w-full object-cover"
           />
           <p className="text-xs text-zinc-500 mt-1">
             <b>Spatial Alignment</b> – Resolving the 30% overlap between SL1 spectral cubes (white) and LL2 observations (colors) to ensure flux consistency.
@@ -2886,7 +2989,7 @@ type SearchEntry = {
   subtitle: string;
   kind: "Page" | "Project" | "Research" | "Note" | "Astro" | "Concept";
   route: string;
-  focus?: { astro?: string; project?: string };
+  focus?: FocusTarget;
   keywords: string;
 };
 
@@ -2927,13 +3030,19 @@ const SEARCH_INDEX: SearchEntry[] = [
     focus: { astro: a.name },
     keywords: (a.name + " " + a.aliases.join(" ") + " " + a.desc).toLowerCase(),
   })),
-  ...CONCEPTS.map((c): SearchEntry => ({
-    title: c.label,
-    subtitle: "Concept",
-    kind: "Concept",
-    route: "graph",
-    keywords: (c.label + " " + c.note).toLowerCase(),
-  })),
+  // Concepts land where their Idea Graph node does (the projects page pre-filtered,
+  // or Notes) instead of on the unfiltered graph.
+  ...CONCEPTS.map((c): SearchEntry => {
+    const to = mockGraph().nodes.find((n) => n.label === c.label)?.to;
+    return {
+      title: c.label,
+      subtitle: "Concept",
+      kind: "Concept",
+      route: to?.route ?? "graph",
+      focus: to?.category ? { category: to.category } : undefined,
+      keywords: (c.label + " " + c.note).toLowerCase(),
+    };
+  }),
 ];
 
 // Fold accents so "kodo" matches "kōdō", "andromeda" matches accented text, etc.
@@ -2969,7 +3078,7 @@ function ProjectsResearch({
 }) {
   const work = WORK;
 
-  const [active, setActive] = useState<any | null>(null);
+  const [active, setActive] = useState<(typeof WORK)[number] | null>(null);
   const [cat, setCat] = useState<string>("all");
 
   // Deep-link: open a project modal when the universal search selects it
@@ -2984,14 +3093,30 @@ function ProjectsResearch({
     if (focusCategory) setCat(focusCategory);
   }, [focusCategory]);
 
-  // Close the project modal on Escape
+  // Close the project modal on Escape (unless the ⌘K palette is open on top of it)
   useEffect(() => {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
+      if (document.querySelector("[data-palette]")) return;
       if (e.key === "Escape") setActive(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [active]);
+
+  // Lock page scroll behind the modal — scrolling the page under the overlay
+  // forced a repaint of it on every frame, and lost your place in the list.
+  useEffect(() => {
+    if (!active) return;
+    const { overflow, paddingRight } = document.body.style;
+    // Pad by the scrollbar's width so hiding it doesn't shift the page sideways.
+    const gap = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = "hidden";
+    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
+    return () => {
+      document.body.style.overflow = overflow;
+      document.body.style.paddingRight = paddingRight;
+    };
   }, [active]);
 
   const categories: { id: string; label: string; tags: string[] }[] = [
@@ -3029,10 +3154,17 @@ function ProjectsResearch({
       {shown.map((w) => (
         <div
           key={w!.title}
-          className={`rounded-2xl border border-zinc-200 p-4 transition
-            ${w!.clickable ? "hover:shadow-md hover:border-zinc-300 cursor-pointer" : ""}
+          className={`rounded-2xl border border-zinc-200 p-4 transition-colors
+            ${w!.clickable ? "hover:border-zinc-400 hover:bg-zinc-50/70 cursor-pointer" : ""}
           `}
           onClick={() => w!.clickable && setActive(w)}
+          onKeyDown={(e) => {
+            if (w!.clickable && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              setActive(w);
+            }
+          }}
+          role={w!.clickable ? "button" : undefined}
           tabIndex={w!.clickable ? 0 : -1}
           aria-disabled={!w!.clickable}
           style={w!.clickable ? {} : { pointerEvents: "none" }}
@@ -3057,18 +3189,24 @@ function ProjectsResearch({
       <AnimatePresence>
         {active && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: 0.15 } }}
+            exit={{ opacity: 0, transition: { duration: 0.12 } }}
             onClick={() => setActive(null)}
           >
+            {/* A short ease-out tween rather than the old underdamped spring (which
+                overshot and took ~0.5s to settle), and no backdrop blur, which was
+                recomputed across the whole screen every frame. */}
             <motion.div
-              className="bg-white rounded-2xl shadow-2xl max-w-4xl w-[90%] p-6 overflow-y-auto max-h-[85vh]"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 120, damping: 15 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label={active.title}
+              className="bg-white rounded-2xl shadow-2xl max-w-4xl w-[90%] p-6 overflow-y-auto overscroll-contain max-h-[85vh]"
+              style={{ willChange: "transform, opacity" }}
+              initial={{ opacity: 0, scale: 0.97, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0, transition: { duration: 0.2, ease: EASE_OUT } }}
+              exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12, ease: "easeIn" } }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-start">
@@ -3078,6 +3216,7 @@ function ProjectsResearch({
                 </div>
                 <button
                   onClick={() => setActive(null)}
+                  aria-label="Close"
                   className="text-zinc-400 hover:text-zinc-600"
                 >
                   ✕
@@ -3113,8 +3252,6 @@ function Contact() {
         
           <a
             href="mailto:ronaktoprani@gmail.com"
-            target="_blank"
-            rel="noopener noreferrer"
             title="Email"
             className="group"
           >
@@ -3182,21 +3319,6 @@ function Contact() {
 // Footer
 // =======
 function Footer() {
-  // Add blink animation styles
-  React.useEffect(() => {
-    if (!document.getElementById('blink-keyframes')) {
-      const style = document.createElement('style');
-      style.id = 'blink-keyframes';
-      style.textContent = `
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  }, []);
-
   const socialLinks = [
     {
       platform: "Twitter",
@@ -3256,7 +3378,7 @@ function Footer() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           {/* Left Section */}
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500" style={{ animation: 'blink 2s ease-in-out infinite' }} />
+            <div className="w-2 h-2 rounded-full bg-blue-500 motion-safe:animate-pulse" />
             <span className="text-sm font-medium text-zinc-700">based in Toronto</span>
           </div>
 
@@ -3266,7 +3388,7 @@ function Footer() {
               <a
                 key={link.platform}
                 href={link.url}
-                target="_blank"
+                target={link.url.startsWith("mailto:") ? undefined : "_blank"}
                 rel="noopener noreferrer"
                 title={link.platform}
                 className="group text-zinc-600 hover:text-zinc-900 transition-colors duration-200"
