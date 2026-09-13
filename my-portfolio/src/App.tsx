@@ -3095,7 +3095,7 @@ function Contact() {
       <img
         src="/ronak-nyc.jpg"
         alt="Ronak Toprani"
-        className="rounded-2xl border border-zinc-200 w-full max-w-3xl object-cover"
+        className="rounded-2xl border border-zinc-200 w-full max-w-2xl object-cover"
       />
       <div className="text-center max-w-xl">
         <h2 className="text-2xl font-semibold mb-2">Reach Out</h2>
