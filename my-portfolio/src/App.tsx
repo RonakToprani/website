@@ -1235,6 +1235,7 @@ function mockGraph() {
   // deep-link lookup on the projects page compares against.
   const nodes: GraphNode[] = [
     // Builds / products (top band)
+    { id: "aircontrol", label: "AirControl", kind: "Project", x: 380, y: 110, note: "Native macOS app: move windows, switch Spaces, and click with in-air hand gestures.", keywords: "aircontrol air control macos mac swift vision hand tracking hand pose gestures pinch webcam computer vision accessibility windows spaces cursor mouse dictation local-first", to: { route: "work", project: "AirControl" } },
     { id: "fixate", label: "Fixate", kind: "Project", x: 110, y: 70, note: "Local-CV Chrome extension that verifies real focus time.", keywords: "chrome extension mv3 computer vision gaze eye tracking focus local cv productivity blocking", to: { route: "work", project: "Fixate" } },
     { id: "kadence", label: "Kadence", kind: "Project", x: 290, y: 70, note: "Local-first health app: reads biometrics over BLE, computes recovery on-device.", keywords: "health wearable biometrics ble bluetooth low energy recovery sleep hrv strain whoop whoomp local-first reverse engineering", to: { route: "work", project: "Kadence" } },
     { id: "kodo", label: "kōdō", kind: "Project", x: 470, y: 70, note: "Productivity dashboard driven by local SLMs.", keywords: "kodo productivity dashboard local slm ollama llm on-device agent", to: { route: "work", project: "kōdō" } },
@@ -1257,6 +1258,7 @@ function mockGraph() {
     { id: "astrophotography", label: "Astrophotography", kind: "Hobbies", x: 520, y: 410, note: "Capturing celestial objects with long exposures.", keywords: "astrophotography telescope seestar canon long exposure stacking deep sky imaging nebula galaxy", to: { route: "blog" } },
   ];
   const links = [
+    { source: "aircontrol", target: "ml" },
     { source: "fixate", target: "ml" },
     { source: "kadence", target: "engineering" },
     { source: "kadence", target: "ml" },
@@ -1916,6 +1918,7 @@ const GITHUB_URL = "https://github.com/RonakToprani";
 const LINKEDIN_MARK =
   "M4.98 3.5C4.98 4.88 3.87 6 2.5 6S.02 4.88.02 3.5C.02 2.12 1.13 1 2.5 1s2.48 1.12 2.48 2.5zM.25 8h4.5v12H.25V8zm7.5 0h4.31v1.64h.06c.6-1.14 2.07-2.34 4.26-2.34 4.56 0 5.4 3 5.4 6.9V20h-4.5v-5.5c0-1.31-.02-3-1.83-3-1.83 0-2.11 1.43-2.11 2.9V20h-4.5V8z";
 const FIXATE_REPO = "https://github.com/RonakToprani/fixate";
+const AIRCONTROL_REPO = "https://github.com/RonakToprani/aircontrol";
 
 function LivePreview({ url, title }: { url: string; title: string }) {
   const host = useMemo(() => {
@@ -2145,6 +2148,89 @@ function FixateReceipt() {
 // Projects + Research — single source of truth (shared with search)
 // =========================================================
 const WORK = [
+    {
+      title: "AirControl",
+      venue: "Native macOS app · Swift · 2026",
+      tags: ["swift", "computer vision", "local-first", "macOS"],
+      desc:
+        "A menu-bar macOS app that drives windows, Spaces, and the cursor with in-air hand gestures seen by the MacBook webcam. Apple Vision hand-pose tracking at ~30fps feeds a filtered gesture engine that moves real windows through the Accessibility API — entirely on-device.",
+      details: (
+        <div className="space-y-4 text-sm max-w-3xl mx-auto">
+          <div className="flex items-start gap-4">
+            <img
+              src="/aircontrol-icon.png"
+              alt="AirControl app icon"
+              width={64}
+              height={64}
+              className="size-16 shrink-0"
+            />
+            <p className="text-zinc-700 leading-relaxed">
+              Pinch in the air to grab a window and drag it across displays; point your thumb to
+              switch Spaces; flip into mouse mode and your hand becomes the cursor. AirControl lives
+              in the menu bar, needs only the built-in webcam, and has no cloud, accounts, or
+              telemetry.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Pinch to move windows</div>
+              <p className="text-xs text-zinc-600">
+                The pointer rides the index fingertip while drags follow the steadier knuckle, so a
+                window doesn't lurch as the finger curls to pinch. Sticky targeting keeps jitter
+                from flicking to the wrong window at grab time.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Feels smooth at 30fps</div>
+              <p className="text-xs text-zinc-600">
+                Detection runs at camera rate, but the overlay pointer eases toward it at 60fps, and
+                a 1€ filter smooths heavily when the hand is still and lightly when it moves fast.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Mouse mode</div>
+              <p className="text-xs text-zinc-600">
+                A held shaka hands over the real cursor: pinch to click or drag, pinch twice to
+                double-click, and close a fist to scroll with momentum.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Dictate without a keyboard</div>
+              <p className="text-xs text-zinc-600">
+                Pinch-hold on a text box to talk — Apple's on-device speech recognition types it on
+                release, and a thumbs-up sends. Audio never leaves the Mac.
+              </p>
+            </div>
+          </div>
+          <ul className="list-disc pl-6 space-y-1 text-zinc-600 text-xs leading-relaxed">
+            <li><b>Capture</b> — <code>AVFoundation</code> into Vision's <code>VNDetectHumanHandPoseRequest</code></li>
+            <li><b>Gestures</b> — pinch normalized by hand size, with hysteresis; hold-to-confirm poses</li>
+            <li><b>Windows</b> — Accessibility API position writes, throttled for slow apps</li>
+            <li><b>Spaces & cursor</b> — synthesized <code>CGEvent</code>s; calibrated hand range maps to every display</li>
+            <li><b>Prototyped first</b> in two in-browser rigs before the native Swift rewrite</li>
+          </ul>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={AIRCONTROL_REPO}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
+            >
+              <Github className="size-3.5" /> View on GitHub
+            </a>
+            <a
+              href={`${AIRCONTROL_REPO}/releases/latest`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
+            >
+              Download for macOS 14+ <ExternalLink className="size-3.5" />
+            </a>
+          </div>
+        </div>
+      ),
+      clickable: true,
+    },
     {
       title: "Fixate",
       venue: "Chrome Extension (MV3) · 2026",
