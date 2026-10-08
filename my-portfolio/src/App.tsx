@@ -109,8 +109,8 @@ export const ASTRO: AstroObj[] = [
   {
     name: "Andromeda Galaxy (M31)",
     aliases: ["Andromeda", "M31", "NGC 224"],
-    files: ["andromeda.jpeg"],
-    desc: "The closest major galaxy to the Milky Way, captured on a somewhat cloudy night in Toronto.",
+    files: ["andromeda.jpeg", "andromeda-2.jpg", "andromeda-3.jpg"],
+    desc: "The closest major galaxy to the Milky Way, shot from Toronto — the first on a somewhat cloudy night, the other two with its dust lanes and companion M110 coming through.",
     gear: "Canon mirrorless",
     ra: hms(0, 42, 44.3),
     dec: dms(41, 16, 9),
@@ -153,6 +153,12 @@ export const ASTRO: AstroObj[] = [
     files: ["field-object.jpg"],
     desc: "A dim galaxy field pushed hard out of a short integration — the kind of target that rewards more time under dark skies.",
     gear: "Canon mirrorless",
+  },
+  {
+    name: "Lunar Eclipse (Aug 2026)",
+    aliases: ["Moon", "lunar eclipse", "partial lunar eclipse", "blood moon"],
+    files: ["moon-eclipse.jpg", "moon-eclipse-2.jpg"],
+    desc: "The recent partial lunar eclipse — Earth's shadow turning most of the Moon a coppery red while the top edge still catches direct sunlight.",
   },
 ];
 
@@ -1506,7 +1512,7 @@ function Notes({ focusAstro }: { focusAstro?: string | null }) {
           {astroPhotos.map((obj, objIdx) => (
             <div key={obj.name} className="rounded-2xl border border-zinc-200 p-4 bg-white">
               <div className="font-medium mb-1">{obj.name}</div>
-              <div className="flex gap-2 mb-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 {obj.files.map((file, imgIdx) => (
                   <button
                     key={file}
@@ -3330,9 +3336,9 @@ function Contact() {
   return (
     <div className="flex flex-col items-center gap-6 py-8">
       <img
-        src="/ronak.jpg"
+        src="/ronak-nyc.jpg"
         alt="Ronak Toprani"
-        className="rounded-2xl border border-zinc-200 w-full max-w-3xl object-cover"
+        className="rounded-2xl border border-zinc-200 w-full max-w-2xl object-cover"
       />
       <div className="text-center max-w-xl">
         <h2 className="text-2xl font-semibold mb-2">Reach Out</h2>
