@@ -1259,7 +1259,7 @@ function mockGraph() {
     { id: "kodo", label: "kōdō", kind: "Project", x: 470, y: 70, note: "Productivity dashboard driven by local SLMs.", keywords: "kodo productivity dashboard local slm ollama llm on-device agent", to: { route: "work", project: "kōdō" } },
     { id: "cryptoradar", label: "CryptoRadar", kind: "Project", x: 650, y: 70, note: "Crypto regulatory + market intelligence terminal.", keywords: "crypto cryptocurrency regulation regulatory market intelligence terminal bitcoin news feed", to: { route: "work", project: "CryptoRadar" } },
     { id: "options", label: "Options Chain Analytics", kind: "Project", x: 110, y: 150, note: "Analytics for historical options chain data.", keywords: "options chain volatility skew risk reversal derivatives greeks dash plotly analytics trading data viz", to: { route: "work", project: "Dash Options chain Platform" } },
-    { id: "tradingbot", label: "XRP Trading Bot", kind: "Project", x: 290, y: 150, note: "Algorithmic trading bot pairing signals with a local SLM.", keywords: "xrp ripple algo algorithmic trading bot crypto signals backtest slm", to: { route: "work", project: "XRP algo trading bot" } },
+    { id: "underdogs", label: "Polymarket Underdogs", kind: "Project", x: 290, y: 150, note: "A systematic Polymarket strategy, calibrated on 356k resolved markets.", keywords: "polymarket underdogs underdog prediction markets edge systematic strategy kelly backtest calibration betting", to: { route: "work", project: "Polymarket Underdogs" } },
     { id: "mochi", label: "Mochi desk robot", kind: "Project", x: 470, y: 150, note: "ESP32 desk companion running a small language model.", keywords: "esp32 embedded microcontroller desk robot companion slm hardware 3d printed", to: { route: "work", project: "Mochi desk robot" } },
     { id: "cubesat", label: "CubeSat (Ukpik-1)", kind: "Project", x: 650, y: 150, note: "Radio ground station for the Ukpik-1 CubeSat.", keywords: "cubesat ukpik-1 satellite radio ground station rf telemetry space engineering", to: { route: "work", project: "CubeSat Satellite Project" } },
     // Research (middle band)
@@ -1294,8 +1294,7 @@ function mockGraph() {
     { source: "spectral", target: "ml" },
     { source: "cubesat", target: "engineering" },
     { source: "cubesat", target: "astro" },
-    { source: "tradingbot", target: "finance" },
-    { source: "tradingbot", target: "ml" },
+    { source: "underdogs", target: "finance" },
     // Hobbies links
     { source: "trading", target: "finance" },
     { source: "trading", target: "ml" },
@@ -2174,6 +2173,107 @@ function AloudStats() {
 }
 
 // =========================================================
+// Polymarket edge — the price curve.
+//
+// The project's result is a curve, not a number: across 355,896 resolved
+// markets the return is concentrated in one slice of entry prices and falls
+// to nothing either side of it. The figures are the real calibration
+// (48h horizon, event-clustered 95% CIs). Which prices those are is the
+// strategy, so the axis is deliberately unlabelled here.
+// =========================================================
+const POLY_CURVE = [
+  { roi: 9.5, lo: -1.4, hi: 20.6, n: 2048, sig: false },
+  { roi: 22.2, lo: 11.5, hi: 32.5, n: 2048, sig: true },
+  { roi: 24.4, lo: 15.0, hi: 33.7, n: 2013, sig: true },
+  { roi: 23.5, lo: 15.5, hi: 31.4, n: 2253, sig: true },
+  { roi: 17.5, lo: 10.5, hi: 24.4, n: 2476, sig: true },
+  { roi: 12.7, lo: 6.6, hi: 19.2, n: 2460, sig: true },
+  { roi: 10.7, lo: 4.5, hi: 17.5, n: 2021, sig: true },
+  { roi: 3.7, lo: -2.2, hi: 9.9, n: 1917, sig: false },
+];
+
+function PolyEdgeCurve() {
+  const W = 640, H = 210, L = 40, R = 12, T = 22, B = 30;
+  const yMin = -6, yMax = 36;
+  const y = (v: number) => T + ((yMax - v) / (yMax - yMin)) * (H - T - B);
+  const slot = (W - L - R) / POLY_CURVE.length;
+  const bar = 34;
+  const peak = POLY_CURVE.reduce((a, b) => (b.roi > a.roi ? b : a));
+  const inBand = POLY_CURVE.filter((d) => d.sig);
+  const bandX0 = L + POLY_CURVE.indexOf(inBand[0]) * slot;
+  const bandX1 = L + (POLY_CURVE.indexOf(inBand[inBand.length - 1]) + 1) * slot;
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="font-medium">ROI per bet, by entry price</div>
+        <div className="text-[11px] uppercase tracking-wide text-zinc-400">backtest</div>
+      </div>
+      <p className="mt-0.5 text-xs text-zinc-500">
+        The return lives in one slice of entry prices and drops to nothing either side of it.
+      </p>
+      <div className="mt-3 overflow-x-auto">
+        <svg viewBox={`0 0 ${W} ${H}`} className="block w-full min-w-[480px]" role="img"
+          aria-label="Bar chart of return on investment across eight adjacent entry-price bands. Six central bands show a significant positive edge peaking at 24.4%; the bands either side are not significant.">
+          {/* the entry band */}
+          <rect x={bandX0} y={T - 6} width={bandX1 - bandX0} height={H - T - B + 6} rx={6}
+            className="fill-zinc-100 dark:fill-zinc-800/60" />
+          <text x={bandX1 - 8} y={H - B - 6} fontSize={10} textAnchor="end" className="fill-current text-zinc-500">
+            where the strategy buys
+          </text>
+          {/* gridlines */}
+          {[0, 10, 20, 30].map((v) => (
+            <g key={v}>
+              <line x1={L} x2={W - R} y1={y(v)} y2={y(v)}
+                className={v === 0 ? "stroke-zinc-400 dark:stroke-zinc-500" : "stroke-zinc-200 dark:stroke-zinc-700"}
+                strokeWidth={1} strokeDasharray={v === 0 ? undefined : "2 3"} />
+              <text x={L - 6} y={y(v) + 3.5} fontSize={10} textAnchor="end" className="fill-current text-zinc-400 tabular-nums">
+                {v === 0 ? "0" : `+${v}%`}
+              </text>
+            </g>
+          ))}
+          {/* bars + 95% CIs */}
+          {POLY_CURVE.map((d, i) => {
+            const cx = L + i * slot + slot / 2;
+            const top = y(Math.max(d.roi, 0)), base = y(0);
+            return (
+              <g key={i}>
+                <title>{`${d.roi > 0 ? "+" : ""}${d.roi}% ROI per bet · 95% CI [${d.lo}%, ${d.hi}%] · n = ${d.n.toLocaleString()}${d.sig ? "" : " · not significant"}`}</title>
+                <rect x={cx - bar / 2} y={top} width={bar} height={Math.max(0, base - top)} rx={3}
+                  className={d.sig ? "fill-zinc-900 dark:fill-zinc-100" : "fill-zinc-300 dark:fill-zinc-600"} />
+                <line x1={cx} x2={cx} y1={y(d.lo)} y2={y(d.hi)} strokeWidth={1}
+                  className={d.sig ? "stroke-zinc-500 dark:stroke-zinc-400" : "stroke-zinc-400 dark:stroke-zinc-500"} />
+                <line x1={cx - 4} x2={cx + 4} y1={y(d.hi)} y2={y(d.hi)} strokeWidth={1} className="stroke-zinc-500 dark:stroke-zinc-400" />
+                <line x1={cx - 4} x2={cx + 4} y1={y(d.lo)} y2={y(d.lo)} strokeWidth={1} className="stroke-zinc-500 dark:stroke-zinc-400" />
+                {d === peak && (
+                  <text x={cx} y={y(d.hi) - 6} fontSize={11} textAnchor="middle" className="fill-current font-medium tabular-nums">
+                    +{d.roi}%
+                  </text>
+                )}
+                {!d.sig && (
+                  <text x={cx} y={y(d.hi) - 6} fontSize={10} textAnchor="middle" className="fill-current text-zinc-400">
+                    n.s.
+                  </text>
+                )}
+                <line x1={cx} x2={cx} y1={H - B + 2} y2={H - B + 6} strokeWidth={1} className="stroke-zinc-300 dark:stroke-zinc-600" />
+              </g>
+            );
+          })}
+          <text x={L} y={H - 4} fontSize={10} className="fill-current text-zinc-400">lower entry price</text>
+          <text x={W - R} y={H - 4} fontSize={10} textAnchor="end" className="fill-current text-zinc-400">higher entry price →</text>
+        </svg>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-3 text-[11px] text-zinc-500">
+        <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-zinc-900 dark:bg-zinc-100" /> significant edge</span>
+        <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-zinc-300 dark:bg-zinc-600" /> not significant</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-px bg-zinc-500" /> 95% CI</span>
+        <span className="ml-auto">355,896 resolved markets · event-clustered CIs</span>
+      </div>
+    </div>
+  );
+}
+
+// =========================================================
 // Fixate session receipt.
 //
 // The whole argument for Fixate is that focus time is *attested* rather than
@@ -2519,6 +2619,107 @@ const WORK = [
       clickable: true,
     },
     {
+      title: "Polymarket Underdogs",
+      venue: "Polymarket · Systematic trading · 2026",
+      tags: ["python", "finance", "trading", "statistics"],
+      desc:
+        "A systematic Polymarket strategy, built measurement-first: one edge, calibrated across 355,896 resolved markets at +20.3% ROI per bet, traded by a system that scans, sizes, records and grades itself.",
+      details: (
+        <div className="space-y-4 text-sm max-w-3xl mx-auto">
+          <p className="text-zinc-700 leading-relaxed">
+            Most of Polymarket is priced efficiently. A specific, repeatable kind of market isn't,
+            and the mispricing there is large, stable across years and horizons, and survives
+            stress-tested transaction costs. The strategy trades only that — nothing else — on a
+            30-minute cycle with fractional-Kelly sizing against a price-calibrated win rate.
+          </p>
+          <figure className="mx-auto max-w-2xl space-y-1.5">
+            {/* Framed like the CryptoRadar live preview — a window onto a running system. */}
+            <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-black">
+              <div className="flex items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-3 py-2">
+                <div className="flex gap-1.5 shrink-0">
+                  <span className="size-2.5 rounded-full bg-zinc-300" />
+                  <span className="size-2.5 rounded-full bg-zinc-300" />
+                  <span className="size-2.5 rounded-full bg-zinc-300" />
+                </div>
+                <div className="flex-1 truncate rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-center text-[11px] text-zinc-500">
+                  polymarket underdogs · monitor
+                </div>
+                <span className="flex shrink-0 items-center gap-1 text-[10px] text-zinc-500">
+                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  booked
+                </span>
+              </div>
+              <img
+                src="/poly-monitor.jpg"
+                alt="The strategy's monitor: book, realized and open P&L, win rate, the validated backtest edge, and the cumulative realized P&L curve"
+                width={1904}
+                height={1310}
+                loading="lazy"
+                decoding="async"
+                className="block w-full h-auto"
+              />
+            </div>
+            <figcaption className="text-xs text-zinc-500">
+              The monitor — the book, open risk, and the validated edge it's graded against, with the
+              realized curve.
+            </figcaption>
+          </figure>
+          <div className="flex flex-col gap-3 md:flex-row md:items-stretch">
+            <div className="min-w-0 flex-1">
+              <PolyEdgeCurve />
+            </div>
+            <div className="flex flex-row justify-between gap-3 rounded-2xl border border-zinc-200 p-4 md:w-56 md:shrink-0 md:flex-col md:justify-around">
+              {[
+                { v: "+20.3%", k: "ROI per bet" },
+                { v: "+16.8 – +24.0%", k: "95% confidence interval" },
+                { v: "355,896", k: "markets backtested" },
+              ].map((x) => (
+                <div key={x.k}>
+                  <div className="text-xl font-semibold tracking-tight tabular-nums leading-none">{x.v}</div>
+                  <div className="mt-1 text-[11px] text-zinc-500">{x.k}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-3">
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Measured, not assumed</div>
+              <p className="text-xs text-zinc-600">
+                Every resolved market since launch priced at multiple horizons, with event-clustered
+                confidence intervals and a slippage stress gate. Anything that failed the gate was
+                dropped, however good it looked at face value.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Graded against a document</div>
+              <p className="text-xs text-zinc-600">
+                A written expectation fixes every number the book is judged by. Settled events
+                count, not bets; losing runs are expected at the strategy's win rate; verdicts wait
+                for sample size.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Runs itself</div>
+              <p className="text-xs text-zinc-600">
+                Scheduled cycles, a SQLite book, a one-page monitor, a Telegram bot that replies
+                with a screenshot of it, and a nightly cloud reviewer that reads the state and
+                sends a verdict.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Python</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">SQLite</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">launchd</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Playwright</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Telegram</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">pytest</span>
+          </div>
+        </div>
+      ),
+      clickable: true,
+    },
+    {
       title: "kōdō",
       venue: "Personal Dashboard · Local SLMs",
       tags: ["node", "local SLM", "ollama", "sqlite"],
@@ -2651,29 +2852,6 @@ const WORK = [
             An ongoing exploration of embedded firmware, display pipelines, and giving a small model
             a face.
           </p>
-        </div>
-      ),
-      clickable: true,
-    },
-    {
-      title: "XRP algo trading bot",
-      venue: "Crypto / Finance · In progress",
-      tags: ["python", "finance", "crypto", "local SLM"],
-      desc:
-        "A Python trading bot for XRP that combines classical quantitative signals with a locally-hosted small language model for short-horizon predictive modeling. In development.",
-      details: (
-        <div className="space-y-3 text-sm max-w-3xl mx-auto">
-          <p className="text-zinc-700 leading-relaxed">
-            An experiment in blending quantitative signals with on-device language models: the bot
-            ingests market data and uses a locally-hosted SLM to help frame short-horizon
-            predictions, feeding a Python execution layer. Still a work in progress — shared here as
-            a live build rather than a finished product.
-          </p>
-          <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
-            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Python</span>
-            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Local SLM</span>
-            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Predictive modeling</span>
-          </div>
         </div>
       ),
       clickable: true,
