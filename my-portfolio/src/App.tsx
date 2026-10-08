@@ -109,8 +109,8 @@ export const ASTRO: AstroObj[] = [
   {
     name: "Andromeda Galaxy (M31)",
     aliases: ["Andromeda", "M31", "NGC 224"],
-    files: ["andromeda.jpeg", "andromeda-2.jpg", "andromeda-3.jpg"],
-    desc: "The closest major galaxy to the Milky Way, shot from Toronto — the first on a somewhat cloudy night, the other two with its dust lanes and companion M110 coming through.",
+    files: ["andromeda.jpeg", "andromeda-3.jpg"],
+    desc: "The closest major galaxy to the Milky Way, shot from Toronto — first on a somewhat cloudy night, then again with its dust lanes and companion M110 coming through.",
     gear: "Canon mirrorless",
     ra: hms(0, 42, 44.3),
     dec: dms(41, 16, 9),
