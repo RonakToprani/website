@@ -26,3 +26,14 @@
 # place every missing file answered 200 with the app's HTML instead of 404,
 # which silently hides broken asset links (a renamed video still "works" until
 # someone notices the page is being served in its place).
+
+# Aloud's live counters, shown in its project modal. The endpoint's CORS
+# header is only present on uncached responses (a Vercel cache quirk), so the
+# browser can't call it directly with any reliability. Proxying it through
+# this origin sidesteps CORS entirely. Vite does the same in dev — see
+# server.proxy in my-portfolio/vite.config.ts.
+[[redirects]]
+  from = "/api/aloud-stats"
+  to = "https://www.aloudreader.org/api/stats"
+  status = 200
+  force = true

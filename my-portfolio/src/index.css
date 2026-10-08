@@ -35,15 +35,18 @@
 
 /* =========================================================
    Entry animation — stage two.
-   After the panel wipes away (see src/Intro.tsx), the workspace assembles:
-   header, sidebar and page card rise into place 40ms apart, which is the
-   interval where a stagger starts reading as deliberate rather than as lag.
+   While the word is in flight (see src/Intro.tsx), the workspace assembles:
+   header and sidebar ease in 40ms apart, which is the interval where a
+   stagger starts reading as deliberate rather than as lag. The page card
+   only fades — it holds the word's landing spot, so it must not move — and
+   the real headline stays hidden until the word lands on it. Everything is
+   finished before the landing, so dropping the class causes no visible snap.
    Driven by a class on the root so the markup only carries a data attribute.
    ========================================================= */
 @keyframes intro-rise {
   from {
     opacity: 0;
-    transform: translate3d(0, 10px, 0);
+    transform: translate3d(0, 8px, 0);
   }
   to {
     opacity: 1;
@@ -62,19 +65,32 @@
   }
 }
 
+@keyframes intro-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .intro-assemble [data-intro] {
   opacity: 0;
-  animation: intro-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: intro-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+/* Delays track FLY_AT in Intro.tsx (740ms): the workspace starts to appear
+   as the word departs, and is settled (~1.3s) before it lands (~1.42s). */
 .intro-assemble [data-intro="header"] {
-  animation-delay: 450ms;
+  animation-delay: 760ms;
 }
 .intro-assemble [data-intro="sidebar"] {
   animation-name: intro-slide-in;
-  animation-delay: 485ms;
+  animation-delay: 800ms;
 }
 .intro-assemble [data-intro="page"] {
-  animation-delay: 520ms;
+  animation-name: intro-fade;
+  animation-timing-function: ease-out;
+  animation-delay: 780ms;
+}
+/* The word in flight *is* the headline until it lands. */
+.intro-assemble #hero-hola {
+  visibility: hidden;
 }
 
 /* Anyone who asked for less motion never sees any of this. */
@@ -97,6 +113,7 @@
    and shadows impossible and reads as cheap.
    ========================================================= */
 :root {
+  --intro-bg: #ffffff;
   --d-page: #0a0a0b;
   --d-surface: #121214;
   --d-raised: #17171a;
@@ -108,6 +125,8 @@
   --d-muted-2: #8b8b95;
   --d-faint: #6c6c76;
 }
+
+.dark { --intro-bg: #0a0a0b; }
 
 .dark body {
   background: var(--d-page);

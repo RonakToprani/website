@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useRef, useContext } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
@@ -14,7 +14,8 @@ import {
   Github,
   Telescope,
 } from "lucide-react";
-import { IntroOverlay, shouldPlayIntro } from "./Intro";
+import { HERO_ID, IntroOverlay, shouldPlayIntro } from "./Intro";
+import { ModalSettled } from "./modal";
 import {
   SITE,
   clockTime,
@@ -391,7 +392,7 @@ function Hero(){
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3">
-        <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">
+        <h1 id={HERO_ID} className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">
         hola
         </h1>
         <p className="text-zinc-600 max-w-2xl">
@@ -400,15 +401,19 @@ function Hero(){
          <img
           src="/home.jpeg"
           alt="Ronak Toprani"
-          className="rounded-2xl border border-zinc-200 w-full max-w-xl mx-auto"
+          width={1400}
+          height={1050}
+          decoding="async"
+          className="rounded-2xl border border-zinc-200 w-full h-auto max-w-xl mx-auto"
         />
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <BlockCard title="Latest Build" icon={<Atom className="size-4" />}>
-          <span className="font-medium">Fixate</span> — a Chrome extension that <em>verifies</em> focus with local, on-device gaze detection. No backend, no data leaves the machine.
+          <span className="font-medium">Aloud</span> — a read-along reader for the web. Bring your own books, press play, and every word lights up as it's spoken. Live at{" "}
+          <a href="https://www.aloudreader.org" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">aloudreader.org</a>.
         </BlockCard>
         <BlockCard title="Also Shipping" icon={<GitBranch className="size-4" />}>
-          <span className="font-medium">Kadence</span> (a local-first health app that reads biometrics on-device) and <span className="font-medium">kōdō</span> (a productivity dashboard run by local SLMs).
+          <span className="font-medium">Fixate</span> (verified focus via on-device gaze detection), <span className="font-medium">Kadence</span> (a local-first health app) and <span className="font-medium">kōdō</span> (a dashboard run by local SLMs).
         </BlockCard>
         <BlockCard title="Recent Note" icon={<BookText className="size-4" />}>
           New astrophotography — the C27 Crescent Nebula, M27 Dumbbell, and more, over in the Notes section.
@@ -1242,6 +1247,7 @@ function mockGraph() {
   // deep-link lookup on the projects page compares against.
   const nodes: GraphNode[] = [
     // Builds / products (top band)
+    { id: "aloud", label: "Aloud", kind: "Project", x: 380, y: 10, note: "Read-along web reader: a real voice, and every word lights up as it's spoken.", keywords: "aloud reader read along text to speech tts voice audiobook epub pdf books highlight karaoke accessibility next.js pwa local-first", to: { route: "work", project: "Aloud" } },
     { id: "fixate", label: "Fixate", kind: "Project", x: 110, y: 70, note: "Local-CV Chrome extension that verifies real focus time.", keywords: "chrome extension mv3 computer vision gaze eye tracking focus local cv productivity blocking", to: { route: "work", project: "Fixate" } },
     { id: "kadence", label: "Kadence", kind: "Project", x: 290, y: 70, note: "Local-first health app: reads biometrics over BLE, computes recovery on-device.", keywords: "health wearable biometrics ble bluetooth low energy recovery sleep hrv strain whoop whoomp local-first reverse engineering", to: { route: "work", project: "Kadence" } },
     { id: "kodo", label: "kōdō", kind: "Project", x: 470, y: 70, note: "Productivity dashboard driven by local SLMs.", keywords: "kodo productivity dashboard local slm ollama llm on-device agent", to: { route: "work", project: "kōdō" } },
@@ -1264,6 +1270,8 @@ function mockGraph() {
     { id: "astrophotography", label: "Astrophotography", kind: "Hobbies", x: 520, y: 410, note: "Capturing celestial objects with long exposures.", keywords: "astrophotography telescope seestar canon long exposure stacking deep sky imaging nebula galaxy", to: { route: "blog" } },
   ];
   const links = [
+    { source: "aloud", target: "ml" },
+    { source: "aloud", target: "engineering" },
     { source: "fixate", target: "ml" },
     { source: "kadence", target: "engineering" },
     { source: "kadence", target: "ml" },
@@ -1309,6 +1317,7 @@ function CommandPalette({
     const pages = SEARCH_INDEX.filter((e) => e.kind === "Page");
     const featured = SEARCH_INDEX.filter((e) =>
       [
+        "Aloud",
         "Fixate",
         "Kadence",
         "M101 (Pinwheel Galaxy)",
@@ -2044,6 +2053,120 @@ function LivePreview({ url, title }: { url: string; title: string }) {
   );
 }
 
+// Project demo videos. Nothing is fetched or decoded until the modal has
+// finished opening, and the box holds the video's aspect ratio from the first
+// frame — so neither the open animation nor the modal's scroll position jumps
+// when the footage arrives.
+function DemoVideo({ src, ratio, poster }: { src: string; ratio: string; poster?: string }) {
+  const settled = useContext(ModalSettled);
+  const ref = useRef<HTMLVideoElement | null>(null);
+  // autoPlay alone isn't guaranteed to fire for a src attached after mount.
+  useEffect(() => {
+    if (settled) ref.current?.play().catch(() => {});
+  }, [settled]);
+  return (
+    <video
+      ref={ref}
+      src={settled ? src : undefined}
+      poster={poster}
+      controls
+      loop
+      muted
+      autoPlay
+      playsInline
+      preload={settled ? "auto" : "none"}
+      className="w-full block"
+      style={{ aspectRatio: ratio }}
+    />
+  );
+}
+
+// Aloud's live counters — the same public endpoint its README badges read,
+// proxied through this origin (netlify.toml / vite.config.ts) because the
+// endpoint's CORS header comes and goes with Vercel's cache. The panel is
+// always there (dashes until the numbers land) so the layout never jumps;
+// once the modal has settled and the data is in, the numbers count up.
+const ALOUD_STATS_PATH = "/api/aloud-stats";
+const ALOUD_STATS_PUBLIC = "https://www.aloudreader.org/api/stats";
+
+function useCountUp(target: number, run: boolean, ms = 1200) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    if (!run) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setV(target);
+      return;
+    }
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / ms);
+      setV(target * (1 - Math.pow(1 - p, 4))); // quartic ease-out: fast, then settles
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, run, ms]);
+  return v;
+}
+
+function AloudStats() {
+  const settled = useContext(ModalSettled);
+  const [stats, setStats] = useState<{ minutes: number; readers: number } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const load = async (attempt = 0) => {
+      try {
+        const r = await fetch(ALOUD_STATS_PATH, { cache: "no-store" });
+        if (!r.ok) throw new Error(String(r.status));
+        const j = await r.json();
+        if (alive && typeof j?.minutes_listened === "number")
+          setStats({ minutes: j.minutes_listened, readers: j.readers });
+      } catch {
+        if (alive && attempt < 1) setTimeout(() => load(attempt + 1), 1500);
+      }
+    };
+    load();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const run = settled && !!stats;
+  const minutes = useCountUp(stats?.minutes ?? 0, run);
+  const readers = useCountUp(stats?.readers ?? 0, run);
+  const show = (n: number) => (stats ? Math.round(n).toLocaleString() : "—");
+
+  return (
+    <aside className="flex shrink-0 justify-between gap-4 rounded-xl border border-zinc-200 p-4 md:w-44 md:flex-col">
+      <div className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+        <span className="relative flex size-1.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+        </span>
+        live
+      </div>
+      <div>
+        <div className="text-3xl font-semibold tracking-tight tabular-nums leading-none">{show(minutes)}</div>
+        <div className="mt-1 text-[11px] text-zinc-500">minutes read aloud</div>
+      </div>
+      <div>
+        <div className="text-3xl font-semibold tracking-tight tabular-nums leading-none">{show(readers)}</div>
+        <div className="mt-1 text-[11px] text-zinc-500">readers</div>
+      </div>
+      <a
+        href={ALOUD_STATS_PUBLIC}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hidden self-end text-[11px] text-zinc-400 hover:text-zinc-900 transition md:block"
+      >
+        from /api/stats ↗
+      </a>
+    </aside>
+  );
+}
+
 // =========================================================
 // Fixate session receipt.
 //
@@ -2153,6 +2276,61 @@ function FixateReceipt() {
 // =========================================================
 const WORK = [
     {
+      title: "Aloud",
+      icon: "/aloud-icon.png",
+      venue: "Read-along reader · Web · 2026",
+      tags: ["typescript", "next.js", "local-first", "product"],
+      desc:
+        "A read-along reader for the web. Bring your own books, press play, and every word lights up as it's spoken. Phone-first, local-first, open source.",
+      details: (
+        <div className="space-y-4 text-sm max-w-3xl mx-auto">
+          <p className="text-zinc-700 leading-relaxed">
+            Add an EPUB, a PDF or pasted text — or pick from nearly 3,000 free classics — and a
+            real voice reads it while a single pill glides from word to word. Books never leave
+            the device.
+          </p>
+          <div className="flex flex-col gap-3 md:flex-row">
+            <div className="min-w-0 flex-1 rounded-xl border border-zinc-200 overflow-hidden bg-black">
+              <DemoVideo src="/aloud.mp4" ratio="1920 / 1080" poster="/aloud-poster.jpg" />
+            </div>
+            <AloudStats />
+          </div>
+          <ul className="list-disc pl-6 space-y-1 text-zinc-600 text-xs leading-relaxed">
+            <li><b>Two clocks</b> — the highlight follows real word-boundary events, and falls back to a per-voice timing model within 400ms when none arrive</li>
+            <li><b>Drawn, not styled</b> — one pill moves and resizes between measured word rectangles, so the eye tracks an object rather than a strobe</li>
+            <li><b>Sounds like narration</b> — passages are synthesised whole and their silences trimmed, so sentences join on the audio clock with no seam</li>
+          </ul>
+          <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Next.js 15</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">React 19</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Supabase</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">pdf.js</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">PWA</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">MIT</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="https://www.aloudreader.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
+            >
+              Open aloudreader.org <ExternalLink className="size-3.5" />
+            </a>
+            <a
+              href="https://github.com/RonakToprani/Aloud"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
+            >
+              <Github className="size-3.5" /> View on GitHub
+            </a>
+          </div>
+        </div>
+      ),
+      clickable: true,
+    },
+    {
       title: "Fixate",
       venue: "Chrome Extension (MV3) · 2026",
       tags: ["typescript", "computer vision", "local-first", "product"],
@@ -2168,16 +2346,7 @@ const WORK = [
           </p>
           <figure className="space-y-1.5">
             <div className="rounded-xl border border-zinc-200 overflow-hidden bg-black">
-              <video
-                src="/Fixate.mp4"
-                controls
-                loop
-                muted
-                autoPlay
-                playsInline
-                preload="metadata"
-                className="w-full block"
-              />
+              <DemoVideo src="/Fixate.mp4" ratio="1920 / 1080" />
             </div>
             <figcaption className="text-xs text-zinc-500">
               Demo — Fixate running a full focus session, start to finish.
@@ -2250,16 +2419,7 @@ const WORK = [
           </p>
           <figure className="space-y-1.5">
             <div className="rounded-2xl border border-zinc-200 overflow-hidden bg-black mx-auto w-full max-w-[260px]">
-              <video
-                src="/kadence.mp4"
-                controls
-                loop
-                muted
-                autoPlay
-                playsInline
-                preload="metadata"
-                className="w-full block"
-              />
+              <DemoVideo src="/kadence.mp4" ratio="524 / 1080" />
             </div>
             <figcaption className="text-xs text-zinc-500 text-center">
               Demo — live biometrics streaming off the wearable over Bluetooth into the on-device dashboard.
@@ -2298,6 +2458,8 @@ const WORK = [
               </div>
               <div>
                 <img
+                loading="lazy"
+                decoding="async"
                   src="/kadence-stress.jpg"
                   alt="Kadence stress-through-the-day methodology"
                   className="rounded-lg border border-zinc-200 w-full max-w-[220px] mx-auto"
@@ -2326,6 +2488,8 @@ const WORK = [
               </div>
               <div>
                 <img
+                loading="lazy"
+                decoding="async"
                   src="/kadence-sleep.jpg"
                   alt="Kadence sleep staging and sleep-need methodology"
                   className="rounded-lg border border-zinc-200 w-full max-w-[170px] mx-auto"
@@ -2365,16 +2529,7 @@ const WORK = [
           </p>
           <figure className="space-y-1.5">
             <div className="rounded-xl border border-zinc-200 overflow-hidden bg-black">
-              <video
-                src="/kodo.mp4"
-                controls
-                loop
-                muted
-                autoPlay
-                playsInline
-                preload="metadata"
-                className="w-full block"
-              />
+              <DemoVideo src="/kodo.mp4" ratio="1728 / 1080" />
             </div>
             <figcaption className="text-xs text-zinc-500">
               Demo — brain-dump input, local-SLM prioritization and time estimates, and the calendar filling in.
@@ -2530,6 +2685,8 @@ const WORK = [
           {/* Main Dashboard Overview */}
           <div className="space-y-2">
             <img
+                loading="lazy"
+                decoding="async"
               src="/optionsdashMain.png"
               alt="Main Dashboard Interface"
               className="rounded-xl border shadow w-full max-w-2xl mx-auto"
@@ -2545,14 +2702,14 @@ const WORK = [
           {/* Multi-view Analysis */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <img src="/IV smile.png" alt="IV Smile Visualization" className="rounded-xl border shadow" /> 
+              <img loading="lazy" decoding="async" src="/IV smile.png" alt="IV Smile Visualization" className="rounded-xl border shadow" /> 
               <p className="text-xs text-zinc-500 mt-1">
                 <b>Implied Volatility Smile</b> – Time-series analysis showing how call and put IV curves evolve. The ATM inflection point reveals market sentiment shifts and skew dynamics critical for risk reversal strategies.
               </p>
             </div> 
 
             <div>
-              <img src="/IV surface.png" alt="3D Volatility Surface" className="rounded-xl border shadow" /> 
+              <img loading="lazy" decoding="async" src="/IV surface.png" alt="3D Volatility Surface" className="rounded-xl border shadow" /> 
               <p className="text-xs text-zinc-500 mt-1">
                 <b>3D Volatility Surface</b> – Interactive surface plot mapping implied volatility across strike prices and time to expiration, revealing term structure patterns and arbitrage opportunities in multi-dimensional space.
               </p>
@@ -2563,6 +2720,8 @@ const WORK = [
          <div className="grid grid-cols-2 gap-3">
           <div>
             <img
+                loading="lazy"
+                decoding="async"
               src="/Risk neutral density .png"
               alt="Risk-Neutral Probability Density"
               className="rounded-xl border shadow w-full"
@@ -2608,6 +2767,8 @@ const WORK = [
           <div className="grid grid-cols-2 gap-3">
             <div>
               <img
+                loading="lazy"
+                decoding="async"
                 src="/filters.png"
                 alt="JWST Filters"
                 className="rounded-xl border shadow"
@@ -2620,6 +2781,8 @@ const WORK = [
             </div>
             <div>
               <img
+                loading="lazy"
+                decoding="async"
                 src="/sites.png"
                 alt="Classification Sites"
                 className="rounded-xl border shadow"
@@ -2669,6 +2832,8 @@ const WORK = [
 
           {/* Mock graph 
           <img
+                loading="lazy"
+                decoding="async"
             src="/f1_comparison_chart.png"
             alt="F1 Score Comparison"
             className="rounded-xl border shadow"
@@ -2813,6 +2978,8 @@ const WORK = [
       <div className="grid grid-cols-2 gap-3">
         <div>
           <img
+                loading="lazy"
+                decoding="async"
             src="/ngc2023_spitzer.jpg"
             alt="NGC 2023 IRAC 8um"
             className="rounded-xl border shadow h-40 w-full object-cover"
@@ -2823,6 +2990,8 @@ const WORK = [
         </div>
         <div>
           <img
+                loading="lazy"
+                decoding="async"
             src="/FOVs_IRAC_LL2_S_SL1.png"
             alt="Field of View Overlays"
             className="rounded-xl border shadow h-40 w-full object-cover"
@@ -2961,6 +3130,12 @@ function searchAll(q: string): SearchEntry[] {
     .map((r) => r.e);
 }
 
+const MODAL_PANEL = {
+  hidden: { opacity: 0, y: 14, scale: 0.985 },
+  shown: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.24, ease: [0.16, 1, 0.3, 1] } },
+  gone: { opacity: 0, y: 8, scale: 0.985, transition: { duration: 0.16, ease: "easeIn" } },
+} as const;
+
 function ProjectsResearch({
   focusProject,
   focusCategory,
@@ -2985,14 +3160,29 @@ function ProjectsResearch({
     if (focusCategory) setCat(focusCategory);
   }, [focusCategory]);
 
-  // Close the project modal on Escape
+  // Media inside the modal waits for this — see ModalSettled. Keyed by title
+  // so a project opened a second time waits again instead of inheriting it.
+  const [settledFor, setSettledFor] = useState<string | null>(null);
+  const settled = !!active && settledFor === active.title;
+
+  // While a project is open: Escape closes it, and the page behind stops
+  // scrolling. The scrollbar's width is padded back in so the page doesn't
+  // shift sideways when it disappears.
   useEffect(() => {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setActive(null);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const { overflow, paddingRight } = document.body.style;
+    const gutter = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = "hidden";
+    if (gutter > 0) document.body.style.paddingRight = `${gutter}px`;
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+      document.body.style.paddingRight = paddingRight;
+    };
   }, [active]);
 
   const categories: { id: string; label: string; tags: string[] }[] = [
@@ -3034,6 +3224,13 @@ function ProjectsResearch({
             ${w!.clickable ? "hover:shadow-md hover:border-zinc-300 cursor-pointer" : ""}
           `}
           onClick={() => w!.clickable && setActive(w)}
+          onKeyDown={(e) => {
+            if (w!.clickable && (e.key === "Enter" || e.key === " ")) {
+              e.preventDefault();
+              setActive(w);
+            }
+          }}
+          role={w!.clickable ? "button" : undefined}
           tabIndex={w!.clickable ? 0 : -1}
           aria-disabled={!w!.clickable}
           style={w!.clickable ? {} : { pointerEvents: "none" }}
@@ -3049,42 +3246,75 @@ function ProjectsResearch({
               </span>
             ))}
           </div>
-          <h3 className="mt-1 font-medium">{w!.title}</h3>
+          <h3 className="mt-1 flex items-center gap-2 font-medium">
+            {w!.icon && (
+              <img src={w!.icon} alt="" width={20} height={20} className="size-5 rounded-md border border-zinc-200" />
+            )}
+            {w!.title}
+          </h3>
           <p className="mt-1 text-sm text-zinc-600">{w!.desc}</p>
         </div>
       ))}
 
-      {/* Overlay modal with animation */}
+      {/* Project modal.
+          What made this feel laggy, and what replaced it:
+          - a full-viewport backdrop-blur, re-rasterised every frame of the
+            fade → a plain scrim, which costs nothing to composite;
+          - an under-damped spring (~1s with overshoot) → a 240ms expo-out
+            tween, the same curve as the intro;
+          - videos fetching and decoding mid-animation → they wait for
+            ModalSettled, and hold their aspect ratio so nothing reflows. */}
       <AnimatePresence>
         {active && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
             onClick={() => setActive(null)}
           >
             <motion.div
-              className="bg-white rounded-2xl shadow-2xl max-w-4xl w-[90%] p-6 overflow-y-auto max-h-[85vh]"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 120, damping: 15 }}
+              key={active.title}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="project-modal-title"
+              className="bg-white rounded-2xl shadow-2xl max-w-4xl w-[90%] p-6 overflow-y-auto overscroll-contain max-h-[85vh]"
+              style={{ willChange: "transform, opacity" }}
+              variants={MODAL_PANEL}
+              initial="hidden"
+              animate="shown"
+              exit="gone"
+              onAnimationComplete={(v) => v === "shown" && setSettledFor(active.title)}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-xl font-semibold">{active.title}</h2>
-                  <p className="text-sm text-zinc-500">{active.venue}</p>
+                <div className="flex items-center gap-3">
+                  {active.icon && (
+                    <img
+                      src={active.icon}
+                      alt=""
+                      width={40}
+                      height={40}
+                      className="size-10 rounded-xl border border-zinc-200"
+                    />
+                  )}
+                  <div>
+                    <h2 id="project-modal-title" className="text-xl font-semibold">{active.title}</h2>
+                    <p className="text-sm text-zinc-500">{active.venue}</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setActive(null)}
+                  aria-label="Close"
                   className="text-zinc-400 hover:text-zinc-600"
                 >
                   ✕
                 </button>
               </div>
-              <div className="mt-4">{active.details}</div>
+              <ModalSettled.Provider value={settled}>
+                <div className="mt-4">{active.details}</div>
+              </ModalSettled.Provider>
             </motion.div>
           </motion.div>
         )}
