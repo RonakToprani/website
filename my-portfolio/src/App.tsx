@@ -402,7 +402,7 @@ function Hero(){
         hola
         </h1>
         <p className="text-zinc-600 max-w-2xl">
-          I’m <span className="font-medium">Ronak Toprani</span> — I currently spend my days working on tech in finance, love physics and philosophy, and build cool things sometimes. this is my portfolio. 
+          I’m <span className="font-medium">Ronak Toprani</span> — I currently spend my days working in finance, love physics and philosophy, and build cool things sometimes. this is my portfolio. 
         </p>
          <img
           src="/home.jpeg"
