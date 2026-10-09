@@ -2184,7 +2184,7 @@ function KadenceGallery() {
               height={1200}
               decoding="async"
               draggable={false}
-              className="block h-[380px] sm:h-[440px] md:h-[480px] w-auto max-w-none shrink-0 snap-start select-none"
+              className="block h-[320px] sm:h-[360px] md:h-[400px] w-auto max-w-none shrink-0 snap-start select-none"
               style={{ aspectRatio: "552 / 1200" }}
             />
           ))}
