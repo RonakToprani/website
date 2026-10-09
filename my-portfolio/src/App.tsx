@@ -13,6 +13,8 @@ import {
   Sun,
   Github,
   Telescope,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { HERO_ID, IntroOverlay, shouldPlayIntro } from "./Intro";
 import { ModalSettled } from "./modal";
@@ -2086,6 +2088,149 @@ function DemoVideo({ src, ratio, poster }: { src: string; ratio: string; poster?
   );
 }
 
+// Kadence's App Store deck. The six slides were designed as one panorama —
+// the phones bleed across slide edges — so they sit flush, no gaps, and read
+// as a single continuous strip. Drifts one slide at a time until the visitor
+// touches it, then it's theirs.
+const KADENCE_SLIDES = [
+  { src: "/kadence/01.jpg", label: "Recovery", alt: "Kadence home screen: recovery score 83%, strain, sleep and stress cards" },
+  { src: "/kadence/02.jpg", label: "Private", alt: "Kadence trends screen: no cloud, no fees, everything on-device" },
+  { src: "/kadence/03.jpg", label: "Workouts", alt: "Kadence workouts history with auto-detected sessions" },
+  { src: "/kadence/04.jpg", label: "Sleep", alt: "Kadence sleep screen: 8h 07m asleep, sleeping heart rate and stages" },
+  { src: "/kadence/05.jpg", label: "Strain", alt: "Kadence today screen: day strain 11.8 and stress through the day" },
+  { src: "/kadence/06.jpg", label: "Everything", alt: "Kadence feature list: recovery, strain, sleep, HRV, live heart rate, workouts" },
+];
+const KADENCE_GREEN = "#16D885";
+
+function KadenceGallery() {
+  const settled = useContext(ModalSettled);
+  const track = useRef<HTMLDivElement | null>(null);
+  const [view, setView] = useState({ first: 0, visible: 1, atStart: true, atEnd: false });
+  const [touched, setTouched] = useState(false);
+  const [hover, setHover] = useState(false);
+
+  const slideWidth = () => (track.current?.firstElementChild as HTMLElement | null)?.offsetWidth || 1;
+
+  const measure = () => {
+    const el = track.current;
+    if (!el) return;
+    const w = slideWidth();
+    setView({
+      first: Math.round(el.scrollLeft / w),
+      visible: Math.max(1, Math.floor(el.clientWidth / w + 0.05)),
+      atStart: el.scrollLeft < 4,
+      atEnd: el.scrollLeft + el.clientWidth > el.scrollWidth - 4,
+    });
+  };
+
+  useEffect(() => {
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [settled]);
+
+  const go = (i: number) => {
+    const el = track.current;
+    if (!el) return;
+    const last = KADENCE_SLIDES.length - view.visible;
+    el.scrollTo({ left: Math.max(0, Math.min(i, last)) * slideWidth(), behavior: "smooth" });
+  };
+  const step = (dir: 1 | -1) => go(view.first + dir * Math.max(1, view.visible - 1));
+
+  // Gentle auto-advance that wraps to the start. Off for reduced motion,
+  // while hovered, and for good once the visitor scrolls or clicks.
+  useEffect(() => {
+    if (!settled || touched || hover) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const t = window.setTimeout(() => (view.atEnd ? go(0) : go(view.first + 1)), 3200);
+    return () => window.clearTimeout(t);
+  }, [settled, touched, hover, view.first, view.atEnd]);
+
+  const arrow =
+    "grid place-items-center size-7 shrink-0 rounded-full border border-white/15 bg-white/5 text-white/80 " +
+    "transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:pointer-events-none";
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-[#0b0d0c] shadow-[0_20px_60px_-20px_rgba(22,216,133,0.35)]"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div className="relative">
+        <div
+          ref={track}
+          tabIndex={0}
+          role="region"
+          aria-roledescription="carousel"
+          aria-label="Kadence screenshots"
+          onScroll={measure}
+          onPointerDown={() => setTouched(true)}
+          onWheel={() => setTouched(true)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+              e.preventDefault();
+              setTouched(true);
+              step(e.key === "ArrowRight" ? 1 : -1);
+            }
+          }}
+          className="flex overflow-x-auto snap-x snap-mandatory overscroll-x-contain outline-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {KADENCE_SLIDES.map((s) => (
+            <img
+              key={s.src}
+              src={settled ? s.src : undefined}
+              alt={s.alt}
+              width={552}
+              height={1200}
+              decoding="async"
+              draggable={false}
+              className="block h-[380px] sm:h-[440px] md:h-[480px] w-auto max-w-none shrink-0 snap-start select-none"
+              style={{ aspectRatio: "552 / 1200" }}
+            />
+          ))}
+        </div>
+
+        {/* Edge fades, only where there's more to see. */}
+        <div
+          className={`pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0b0d0c] to-transparent transition-opacity duration-300 ${view.atStart ? "opacity-0" : "opacity-100"}`}
+        />
+        <div
+          className={`pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0b0d0c] to-transparent transition-opacity duration-300 ${view.atEnd ? "opacity-0" : "opacity-100"}`}
+        />
+      </div>
+
+      {/* Segmented progress: lit segments are the slides currently in view. */}
+      <div className="flex items-center gap-3 border-t border-white/10 px-3 py-2.5">
+        <button aria-label="Previous screenshots" className={arrow} disabled={view.atStart} onClick={() => { setTouched(true); step(-1); }}>
+          <ChevronLeft className="size-4" />
+        </button>
+        <span className="font-mono text-[10px] tracking-[0.2em] text-white/50 shrink-0">
+          {String(view.first + 1).padStart(2, "0")} / {String(KADENCE_SLIDES.length).padStart(2, "0")}
+        </span>
+        <div className="flex flex-1 gap-1.5">
+          {KADENCE_SLIDES.map((s, i) => {
+            const lit = i >= view.first && i < view.first + view.visible;
+            return (
+              <button key={s.src} aria-label={`Show ${s.label}`} onClick={() => { setTouched(true); go(i); }} className="flex-1 py-1.5">
+                <span
+                  className="block h-[3px] rounded-full transition-all duration-500"
+                  style={{ background: lit ? KADENCE_GREEN : "rgba(255,255,255,0.18)", boxShadow: lit ? `0 0 8px ${KADENCE_GREEN}80` : "none" }}
+                />
+              </button>
+            );
+          })}
+        </div>
+        <span className="hidden sm:block text-[10px] uppercase tracking-[0.2em] text-white/50 shrink-0 w-20 text-right">
+          {KADENCE_SLIDES[view.first]?.label}
+        </span>
+        <button aria-label="Next screenshots" className={arrow} disabled={view.atEnd} onClick={() => { setTouched(true); step(1); }}>
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Aloud's live counters — the same public endpoint its README badges read,
 // proxied through this origin (netlify.toml / vite.config.ts) because the
 // endpoint's CORS header comes and goes with Vercel's cache. The panel is
@@ -2524,11 +2669,9 @@ const WORK = [
             turning it into stable derived metrics.
           </p>
           <figure className="space-y-1.5">
-            <div className="rounded-2xl border border-zinc-200 overflow-hidden bg-black mx-auto w-full max-w-[260px]">
-              <DemoVideo src="/kadence.mp4" ratio="524 / 1080" />
-            </div>
+            <KadenceGallery />
             <figcaption className="text-xs text-zinc-500 text-center">
-              Demo — live biometrics streaming off the wearable over Bluetooth into the on-device dashboard.
+              Real on-device captures — recovery, trends, workouts, sleep and strain, all computed on the phone.
             </figcaption>
           </figure>
           <div className="rounded-xl border border-zinc-200 p-3">
