@@ -2583,6 +2583,7 @@ const WORK = [
     },
     {
       title: "Fixate",
+      icon: "/fixate-icon.png",
       venue: "Chrome Extension (MV3) · 2026",
       tags: ["typescript", "computer vision", "local-first", "product"],
       desc:
