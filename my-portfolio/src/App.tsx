@@ -1256,6 +1256,7 @@ function mockGraph() {
   const nodes: GraphNode[] = [
     // Builds / products (top band)
     { id: "aloud", label: "Aloud", kind: "Project", x: 380, y: 10, note: "Read-along web reader: a real voice, and every word lights up as it's spoken.", keywords: "aloud reader read along text to speech tts voice audiobook epub pdf books highlight karaoke accessibility next.js pwa local-first", to: { route: "work", project: "Aloud" } },
+    { id: "aircontrol", label: "AirControl", kind: "Project", x: 200, y: 10, note: "Native macOS app: point, pinch, scroll and dictate with in-air hand gestures.", keywords: "aircontrol air control macos mac swift vision hand tracking hand pose gestures pinch fist webcam computer vision accessibility windows desktops cursor mouse dictation speech local-first", to: { route: "work", project: "AirControl" } },
     { id: "fixate", label: "Fixate", kind: "Project", x: 110, y: 70, note: "Local-CV Chrome extension that verifies real focus time.", keywords: "chrome extension mv3 computer vision gaze eye tracking focus local cv productivity blocking", to: { route: "work", project: "Fixate" } },
     { id: "kadence", label: "Kadence", kind: "Project", x: 290, y: 70, note: "Local-first health app: reads biometrics over BLE, computes recovery on-device.", keywords: "health wearable biometrics ble bluetooth low energy recovery sleep hrv strain whoop whoomp local-first reverse engineering", to: { route: "work", project: "Kadence" } },
     { id: "kodo", label: "kōdō", kind: "Project", x: 470, y: 70, note: "Productivity dashboard driven by local SLMs.", keywords: "kodo productivity dashboard local slm ollama llm on-device agent", to: { route: "work", project: "kōdō" } },
@@ -1280,6 +1281,8 @@ function mockGraph() {
   const links = [
     { source: "aloud", target: "ml" },
     { source: "aloud", target: "engineering" },
+    { source: "aircontrol", target: "ml" },
+    { source: "aircontrol", target: "engineering" },
     { source: "fixate", target: "ml" },
     { source: "kadence", target: "engineering" },
     { source: "kadence", target: "ml" },
@@ -2575,6 +2578,90 @@ const WORK = [
               className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
             >
               <Github className="size-3.5" /> View on GitHub
+            </a>
+          </div>
+        </div>
+      ),
+      clickable: true,
+    },
+    {
+      title: "AirControl",
+      icon: "/aircontrol-icon.png",
+      venue: "Native macOS app · Swift · 2026",
+      tags: ["swift", "computer vision", "local-first", "product"],
+      desc:
+        "A menu-bar app that turns the Mac's webcam into a controller. Point to move the cursor, pinch to click and drag windows, make a fist to scroll, talk to type. Apple's Vision hand-pose runs on-device at ~30fps; 45 to 60 ms from hand to cursor. $19, one-time.",
+      details: (
+        <div className="space-y-4 text-sm max-w-3xl mx-auto">
+          <p className="text-zinc-700 leading-relaxed">
+            Six held poses are the whole manual: point, pinch, fist, fist with the thumb out,
+            pinch-and-hold to dictate, thumbs up to send. Each one is tuned over months of daily
+            use so it fires when you mean it and stays quiet when you don't. Nothing leaves the
+            Mac — frames are read and discarded in memory.
+          </p>
+          <figure className="space-y-1.5">
+            <div className="rounded-xl border border-zinc-200 overflow-hidden bg-black">
+              <DemoVideo src="/aircontrol.mp4" ratio="1920 / 1080" poster="/aircontrol-poster.jpg" />
+            </div>
+            <figcaption className="text-xs text-zinc-500">
+              Real recording — moving windows, scrolling and switching desktops by hand.
+            </figcaption>
+          </figure>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Gestures that don't misfire</div>
+              <p className="text-xs text-zinc-600">
+                Pinch is normalised by hand size and gated with hysteresis and hold time, so a
+                closing fist never reads as a pinch and a wave never switches your desktop.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Smooth at camera rate</div>
+              <p className="text-xs text-zinc-600">
+                Detection runs at ~30fps, the pointer eases toward it at 60fps, and a 1€ filter
+                smooths heavily when the hand is still and lightly when it moves fast. Drags
+                track the knuckle, so a window doesn't lurch as the fingers close.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Every display, one cursor</div>
+              <p className="text-xs text-zinc-600">
+                Calibration maps a comfortable range of motion to the whole desktop, and the cursor
+                crosses from monitor to monitor in any arrangement with no dead space between them.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 p-3">
+              <div className="font-medium mb-1">Talk to type</div>
+              <p className="text-xs text-zinc-600">
+                Pinch-hold over any text field and speak. Apple's on-device speech recognition
+                types it where the cursor is, and a thumbs up presses Enter. Audio never leaves
+                the machine.
+              </p>
+            </div>
+          </div>
+          <ul className="list-disc pl-6 space-y-1 text-zinc-600 text-xs leading-relaxed">
+            <li><b>Capture</b> — <code>AVFoundation</code> into Vision's <code>VNDetectHumanHandPoseRequest</code>, 21 landmarks per frame</li>
+            <li><b>Output</b> — native <code>CGEvent</code>s for cursor, scroll and keys; the Accessibility API moves windows, throttled for slow apps</li>
+            <li><b>Measured, not promised</b> — the status line shows detection rate and inference time live, so the latency claim is read off your own Mac</li>
+            <li><b>Lightweight mode</b> — lower camera and detection load on Intel, same gestures</li>
+            <li><b>Off means off</b> — switch it off from the menu bar or hold up two fingers at the camera; the menu-bar hand hollows out</li>
+          </ul>
+          <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Swift</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">AppKit</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Vision</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">AVFoundation</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Speech</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">macOS 14+</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="https://getaircontrol.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
+            >
+              Open getaircontrol.vercel.app <ExternalLink className="size-3.5" />
             </a>
           </div>
         </div>
