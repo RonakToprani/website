@@ -15,6 +15,12 @@ import {
   Telescope,
   ChevronLeft,
   ChevronRight,
+  Pointer,
+  MousePointerClick,
+  Grab,
+  AppWindow,
+  Mic,
+  ThumbsUp,
 } from "lucide-react";
 import { HERO_ID, IntroOverlay, shouldPlayIntro } from "./Intro";
 import { ModalSettled } from "./modal";
@@ -2594,57 +2600,76 @@ const WORK = [
       details: (
         <div className="space-y-4 text-sm max-w-3xl mx-auto">
           <p className="text-zinc-700 leading-relaxed">
-            Six held poses are the whole manual: point, pinch, fist, fist with the thumb out,
-            pinch-and-hold to dictate, thumbs up to send. Each one is tuned over months of daily
-            use so it fires when you mean it and stays quiet when you don't. Nothing leaves the
-            Mac — frames are read and discarded in memory.
+            Six held poses are the whole manual. Each one is tuned over months of daily use so it
+            fires when you mean it and stays quiet when you don't.
           </p>
-          <figure className="space-y-1.5">
-            <div className="rounded-xl border border-zinc-200 overflow-hidden bg-black">
-              <DemoVideo src="/aircontrol.mp4" ratio="1920 / 1080" poster="/aircontrol-poster.jpg" />
-            </div>
-            <figcaption className="text-xs text-zinc-500">
-              Real recording — moving windows, scrolling and switching desktops by hand.
-            </figcaption>
-          </figure>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div className="rounded-xl border border-zinc-200 p-3">
-              <div className="font-medium mb-1">Gestures that don't misfire</div>
-              <p className="text-xs text-zinc-600">
-                Pinch is normalised by hand size and gated with hysteresis and hold time, so a
-                closing fist never reads as a pinch and a wave never switches your desktop.
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 p-3">
-              <div className="font-medium mb-1">Smooth at camera rate</div>
-              <p className="text-xs text-zinc-600">
-                Detection runs at ~30fps, the pointer eases toward it at 60fps, and a 1€ filter
-                smooths heavily when the hand is still and lightly when it moves fast. Drags
-                track the knuckle, so a window doesn't lurch as the fingers close.
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 p-3">
-              <div className="font-medium mb-1">Every display, one cursor</div>
-              <p className="text-xs text-zinc-600">
-                Calibration maps a comfortable range of motion to the whole desktop, and the cursor
-                crosses from monitor to monitor in any arrangement with no dead space between them.
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 p-3">
-              <div className="font-medium mb-1">Talk to type</div>
-              <p className="text-xs text-zinc-600">
-                Pinch-hold over any text field and speak. Apple's on-device speech recognition
-                types it where the cursor is, and a thumbs up presses Enter. Audio never leaves
-                the machine.
-              </p>
+
+          {/* Recording beside the numbers that matter */}
+          <div className="grid gap-3 md:grid-cols-5">
+            <figure className="md:col-span-3 space-y-1.5">
+              <div className="rounded-xl border border-zinc-200 overflow-hidden bg-black">
+                <DemoVideo src="/aircontrol.mp4" ratio="1920 / 1080" poster="/aircontrol-poster.jpg" />
+              </div>
+              <figcaption className="text-xs text-zinc-500">
+                Real recording — windows, scrolling and desktops, by hand.
+              </figcaption>
+            </figure>
+            <div className="md:col-span-2 grid gap-2 md:gap-3">
+              {[
+                { v: "45–60 ms", k: "hand to cursor, Apple Silicon" },
+                { v: "30 fps", k: "21-point hand skeleton, on-device" },
+                { v: "0 bytes", k: "leave the Mac. Frames are discarded in memory" },
+              ].map((s) => (
+                <div key={s.v} className="flex items-baseline gap-2 rounded-xl border border-zinc-200 p-3 md:block">
+                  <div className="shrink-0 text-xl font-medium tabular-nums leading-none">{s.v}</div>
+                  <div className="text-[11px] text-zinc-500 leading-snug md:mt-1.5">{s.k}</div>
+                </div>
+              ))}
             </div>
           </div>
+
+          {/* The six gestures */}
+          <div className="grid sm:grid-cols-3 gap-2">
+            {[
+              { Icon: Pointer, name: "Point", how: "open hand" },
+              { Icon: MousePointerClick, name: "Click, drag", how: "pinch, hold to grab" },
+              { Icon: Grab, name: "Scroll", how: "fist, then move" },
+              { Icon: AppWindow, name: "Switch desktop", how: "fist, thumb out" },
+              { Icon: Mic, name: "Dictate", how: "pinch-hold on text" },
+              { Icon: ThumbsUp, name: "Send", how: "thumbs up, presses Enter" },
+            ].map((g) => (
+              <div key={g.name} className="flex items-center gap-3 rounded-xl border border-zinc-200 p-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-white">
+                  <g.Icon className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <div className="font-medium leading-tight">{g.name}</div>
+                  <div className="text-[11px] text-zinc-500 leading-tight">{g.how}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Privacy, as a table */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-zinc-200 rounded-xl border border-zinc-200 text-xs">
+            {[
+              ["Camera upload", "Never"],
+              ["Analytics", "None"],
+              ["Account", "None"],
+              ["License check", "Once"],
+            ].map(([k, v]) => (
+              <div key={k} className="flex items-center justify-between gap-2 px-3 py-2">
+                <span className="text-zinc-500">{k}</span>
+                <span className="font-medium">{v}</span>
+              </div>
+            ))}
+          </div>
+
           <ul className="list-disc pl-6 space-y-1 text-zinc-600 text-xs leading-relaxed">
-            <li><b>Capture</b> — <code>AVFoundation</code> into Vision's <code>VNDetectHumanHandPoseRequest</code>, 21 landmarks per frame</li>
-            <li><b>Output</b> — native <code>CGEvent</code>s for cursor, scroll and keys; the Accessibility API moves windows, throttled for slow apps</li>
-            <li><b>Measured, not promised</b> — the status line shows detection rate and inference time live, so the latency claim is read off your own Mac</li>
-            <li><b>Lightweight mode</b> — lower camera and detection load on Intel, same gestures</li>
-            <li><b>Off means off</b> — switch it off from the menu bar or hold up two fingers at the camera; the menu-bar hand hollows out</li>
+            <li><b>Smooth at camera rate</b> — detection at 30fps, pointer eased at 60fps, a 1€ filter heavy when still and light when fast; drags track the knuckle so windows don't lurch</li>
+            <li><b>Capture → output</b> — <code>AVFoundation</code> into Vision's hand pose; native <code>CGEvent</code>s for cursor, scroll and keys; the Accessibility API moves windows</li>
+            <li><b>Every display</b> — calibration maps a comfortable range of motion to the whole desktop, across monitors in any arrangement</li>
+            <li><b>Yours to tune</b> — every threshold is a slider if your hands disagree with the defaults; lightweight mode on Intel</li>
           </ul>
           <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
             <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Swift</span>
