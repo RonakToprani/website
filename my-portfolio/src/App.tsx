@@ -15,6 +15,15 @@ import {
   Telescope,
   ChevronLeft,
   ChevronRight,
+  Pointer,
+  MousePointerClick,
+  Grab,
+  AppWindow,
+  Mic,
+  ThumbsUp,
+  Camera,
+  Cpu,
+  CloudOff,
 } from "lucide-react";
 import { HERO_ID, IntroOverlay, shouldPlayIntro } from "./Intro";
 import { ModalSettled } from "./modal";
@@ -1256,6 +1265,7 @@ function mockGraph() {
   const nodes: GraphNode[] = [
     // Builds / products (top band)
     { id: "aloud", label: "Aloud", kind: "Project", x: 380, y: 10, note: "Read-along web reader: a real voice, and every word lights up as it's spoken.", keywords: "aloud reader read along text to speech tts voice audiobook epub pdf books highlight karaoke accessibility next.js pwa local-first", to: { route: "work", project: "Aloud" } },
+    { id: "aircontrol", label: "AirControl", kind: "Project", x: 200, y: 10, note: "Native macOS app: point, pinch, scroll and dictate with in-air hand gestures.", keywords: "aircontrol air control macos mac swift vision hand tracking hand pose gestures pinch fist webcam computer vision accessibility windows desktops cursor mouse dictation speech local-first", to: { route: "work", project: "AirControl" } },
     { id: "fixate", label: "Fixate", kind: "Project", x: 110, y: 70, note: "Local-CV Chrome extension that verifies real focus time.", keywords: "chrome extension mv3 computer vision gaze eye tracking focus local cv productivity blocking", to: { route: "work", project: "Fixate" } },
     { id: "kadence", label: "Kadence", kind: "Project", x: 290, y: 70, note: "Local-first health app: reads biometrics over BLE, computes recovery on-device.", keywords: "health wearable biometrics ble bluetooth low energy recovery sleep hrv strain whoop whoomp local-first reverse engineering", to: { route: "work", project: "Kadence" } },
     { id: "kodo", label: "kōdō", kind: "Project", x: 470, y: 70, note: "Productivity dashboard driven by local SLMs.", keywords: "kodo productivity dashboard local slm ollama llm on-device agent", to: { route: "work", project: "kōdō" } },
@@ -1280,6 +1290,8 @@ function mockGraph() {
   const links = [
     { source: "aloud", target: "ml" },
     { source: "aloud", target: "engineering" },
+    { source: "aircontrol", target: "ml" },
+    { source: "aircontrol", target: "engineering" },
     { source: "fixate", target: "ml" },
     { source: "kadence", target: "engineering" },
     { source: "kadence", target: "ml" },
@@ -2522,6 +2534,94 @@ function FixateReceipt() {
   );
 }
 
+// AirControl's three numbers, each with a small drawing so the tiles aren't
+// just a figure floating in a box: a latency range on a 0-100 ms track, the
+// 21-point hand skeleton Vision returns, and the camera-to-Mac path with the
+// cloud crossed out.
+const HAND_FINGERS: [number, number][][] = [
+  [[22, 50], [15, 42], [10, 35], [6, 29]],
+  [[24, 38], [22, 27], [21, 18], [20, 10]],
+  [[32, 36], [32, 24], [32, 14], [32, 6]],
+  [[40, 38], [41, 27], [42, 18], [43, 11]],
+  [[47, 42], [50, 33], [52, 26], [54, 20]],
+];
+const HAND_WRIST: [number, number] = [32, 58];
+
+function HandSkeleton() {
+  const bases = HAND_FINGERS.map((f) => f[0]);
+  const bones: [[number, number], [number, number]][] = [];
+  for (const f of HAND_FINGERS) {
+    bones.push([HAND_WRIST, f[0]]);
+    for (let i = 0; i < f.length - 1; i++) bones.push([f[i], f[i + 1]]);
+  }
+  for (let i = 1; i < bases.length - 1; i++) bones.push([bases[i], bases[i + 1]]);
+  return (
+    <svg viewBox="0 0 64 64" className="size-14 shrink-0" aria-hidden="true">
+      {bones.map(([a, b], i) => (
+        <line key={i} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} className="stroke-zinc-300" strokeWidth="1" />
+      ))}
+      {[HAND_WRIST, ...HAND_FINGERS.flat()].map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="1.7" className="fill-zinc-900" />
+      ))}
+    </svg>
+  );
+}
+
+function LatencyMeter() {
+  // 0-100 ms track; the measured band sits at 45-60.
+  return (
+    <svg viewBox="0 0 120 36" className="h-9 w-[120px] shrink-0" aria-hidden="true">
+      <rect x="2" y="12" width="116" height="6" rx="3" className="fill-zinc-200" />
+      <rect x={2 + 116 * 0.45} y="10" width={116 * 0.15} height="10" rx="3" className="fill-zinc-900" />
+      {[0, 50, 100].map((t) => (
+        <g key={t}>
+          <line x1={2 + 116 * (t / 100)} y1="20" x2={2 + 116 * (t / 100)} y2="23" className="stroke-zinc-300" />
+          <text x={2 + 116 * (t / 100)} y="33" textAnchor={t === 0 ? "start" : t === 100 ? "end" : "middle"} className="fill-zinc-400" fontSize="8">
+            {t === 100 ? "100 ms" : t}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function PrivacyFlow() {
+  return (
+    <div className="flex shrink-0 items-center gap-1.5 text-zinc-400" aria-hidden="true">
+      <Camera className="size-4" />
+      <span className="h-px w-4 bg-zinc-300" />
+      <span className="flex size-7 items-center justify-center rounded-md bg-zinc-900 text-white">
+        <Cpu className="size-4" />
+      </span>
+      <span className="relative h-px w-5 border-t border-dashed border-zinc-300">
+        <span className="absolute -top-[7px] left-1/2 -translate-x-1/2 bg-white px-0.5 text-[10px] leading-none text-zinc-500">×</span>
+      </span>
+      <CloudOff className="size-4 text-zinc-300" />
+    </div>
+  );
+}
+
+function AirStats() {
+  const tiles = [
+    { v: "45–60 ms", k: "hand to cursor, Apple Silicon", art: <LatencyMeter /> },
+    { v: "30 fps", k: "21-point hand skeleton, on-device", art: <HandSkeleton /> },
+    { v: "0 bytes", k: "leave the Mac. Frames are discarded in memory", art: <PrivacyFlow /> },
+  ];
+  return (
+    <div className="md:col-span-2 grid gap-2 md:gap-3">
+      {tiles.map((s) => (
+        <div key={s.v} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 p-3">
+          <div className="min-w-0">
+            <div className="text-xl font-medium tabular-nums leading-none">{s.v}</div>
+            <div className="mt-1.5 text-[11px] text-zinc-500 leading-snug">{s.k}</div>
+          </div>
+          {s.art}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // =========================================================
 // Projects + Research — single source of truth (shared with search)
 // =========================================================
@@ -2575,6 +2675,98 @@ const WORK = [
               className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
             >
               <Github className="size-3.5" /> View on GitHub
+            </a>
+          </div>
+        </div>
+      ),
+      clickable: true,
+    },
+    {
+      title: "AirControl",
+      icon: "/aircontrol-icon.png",
+      venue: "Native macOS app · Swift · 2026",
+      tags: ["swift", "computer vision", "local-first", "product"],
+      desc:
+        "A menu-bar app that turns the Mac's webcam into a controller. Point to move the cursor, pinch to click and drag windows, make a fist to scroll, talk to type. Apple's Vision hand-pose runs on-device at ~30fps; 45 to 60 ms from hand to cursor. $19, one-time.",
+      details: (
+        <div className="space-y-4 text-sm max-w-3xl mx-auto">
+          <p className="text-zinc-700 leading-relaxed">
+            Six held poses are the whole manual. Each one is tuned over months of daily use so it
+            fires when you mean it and stays quiet when you don't.
+          </p>
+
+          {/* Recording beside the numbers that matter */}
+          <div className="grid gap-3 md:grid-cols-5">
+            <figure className="md:col-span-3 space-y-1.5">
+              <div className="rounded-xl border border-zinc-200 overflow-hidden bg-black">
+                <DemoVideo src="/aircontrol.mp4" ratio="1920 / 1080" poster="/aircontrol-poster.jpg" />
+              </div>
+              <figcaption className="text-xs text-zinc-500">
+                Real recording — windows, scrolling and desktops, by hand.
+              </figcaption>
+            </figure>
+            <AirStats />
+          </div>
+
+          {/* The six gestures */}
+          <div className="grid sm:grid-cols-3 gap-2">
+            {[
+              { Icon: Pointer, name: "Point", how: "open hand" },
+              { Icon: MousePointerClick, name: "Click, drag", how: "pinch, hold to grab" },
+              { Icon: Grab, name: "Scroll", how: "fist, then move" },
+              { Icon: AppWindow, name: "Switch desktop", how: "fist, thumb out" },
+              { Icon: Mic, name: "Dictate", how: "pinch-hold on text" },
+              { Icon: ThumbsUp, name: "Send", how: "thumbs up, presses Enter" },
+            ].map((g) => (
+              <div key={g.name} className="flex items-center gap-3 rounded-xl border border-zinc-200 p-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-white">
+                  <g.Icon className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <div className="font-medium leading-tight">{g.name}</div>
+                  <div className="text-[11px] text-zinc-500 leading-tight">{g.how}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Privacy, as a table */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-zinc-200 rounded-xl border border-zinc-200 text-xs">
+            {[
+              ["Camera upload", "Never"],
+              ["Analytics", "None"],
+              ["Account", "None"],
+              ["License check", "Once"],
+            ].map(([k, v]) => (
+              <div key={k} className="flex items-center justify-between gap-2 px-3 py-2">
+                <span className="text-zinc-500">{k}</span>
+                <span className="font-medium">{v}</span>
+              </div>
+            ))}
+          </div>
+
+          <ul className="list-disc pl-6 space-y-1 text-zinc-600 text-xs leading-relaxed">
+            <li><b>Smooth at camera rate</b> — detection at 30fps, pointer eased at 60fps, a 1€ filter heavy when still and light when fast; drags track the knuckle so windows don't lurch</li>
+            <li><b>Capture → output</b> — <code>AVFoundation</code> into Vision's hand pose; native <code>CGEvent</code>s for cursor, scroll and keys; the Accessibility API moves windows</li>
+            <li><b>Every display</b> — calibration maps a comfortable range of motion to the whole desktop, across monitors in any arrangement</li>
+            <li><b>Yours to tune</b> — every threshold is a slider if your hands disagree with the defaults; lightweight mode on Intel</li>
+          </ul>
+          <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Swift</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">AppKit</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Vision</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">AVFoundation</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">Speech</span>
+            <span className="rounded-lg border border-zinc-200 px-2 py-0.5">macOS 14+</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="https://getaircontrol.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
+            >
+              Open getaircontrol.vercel.app <ExternalLink className="size-3.5" />
             </a>
           </div>
         </div>
