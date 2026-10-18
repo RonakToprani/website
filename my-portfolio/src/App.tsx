@@ -2761,12 +2761,12 @@ const WORK = [
           </div>
           <div className="flex flex-wrap gap-2">
             <a
-              href="https://getaircontrol.vercel.app"
+              href="https://tryaircontrol.com"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 transition"
             >
-              Open getaircontrol.vercel.app <ExternalLink className="size-3.5" />
+              Open tryaircontrol.com <ExternalLink className="size-3.5" />
             </a>
           </div>
         </div>
